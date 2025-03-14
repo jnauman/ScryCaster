@@ -22,8 +22,9 @@ class CharactersRelationManager extends RelationManager
 						 Forms\Components\TextInput::make('initiative_roll')
 												   ->numeric()
 												   ->nullable(),
-						 Forms\Components\Toggle::make('current_turn')
-												->default(false),
+						 Forms\Components\TextInput::make('order')
+							 ->numeric()
+							 ->nullable(),
 					 ]);
 	}
 
@@ -33,8 +34,7 @@ class CharactersRelationManager extends RelationManager
 			->columns([
 						  Tables\Columns\TextColumn::make('name'),
 						  Tables\Columns\TextColumn::make('initiative_roll'),
-						  Tables\Columns\IconColumn::make('current_turn')
-												   ->boolean(),
+						  Tables\Columns\TextColumn::make('order'),
 					  ])
 			->filters([
 						  //

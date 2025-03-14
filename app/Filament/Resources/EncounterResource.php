@@ -10,6 +10,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -19,14 +21,12 @@ class EncounterResource extends Resource
 
 	protected static ?string $navigationIcon = 'heroicon-o-sparkles';
 
-
 	public static function form(Form $form): Form
 	{
-		return $form
-			->schema([
-						 Forms\Components\TextInput::make('name')->required(),
-						 Forms\Components\TextInput::make('round_count')->numeric()->default(0)->required(),
-					 ]);
+		return $form->schema([
+								 Forms\Components\TextInput::make('name')->required(),
+								 Forms\Components\TextInput::make('current_round')->numeric()->default(0)->required(),
+							 ]);
 	}
 
 	public static function table(Table $table): Table
@@ -34,11 +34,9 @@ class EncounterResource extends Resource
 		return $table
 			->columns([
 						  Tables\Columns\TextColumn::make('name'),
-						  Tables\Columns\TextColumn::make('round_count'),
+						  Tables\Columns\TextColumn::make('current_round'),
 					  ])
-			->filters([
-						  //
-					  ])
+			->filters([])
 			->actions([
 						  Tables\Actions\EditAction::make(),
 						  Tables\Actions\DeleteAction::make(),
@@ -52,9 +50,7 @@ class EncounterResource extends Resource
 
 	public static function getRelations(): array
 	{
-		return [
-			RelationManagers\CharactersRelationManager::class,
-		];
+		return [RelationManagers\CharactersRelationManager::class];
 	}
 
 	public static function getPages(): array
@@ -63,6 +59,56 @@ class EncounterResource extends Resource
 			'index' => Pages\ListEncounters::route('/'),
 			'create' => Pages\CreateEncounter::route('/create'),
 			'edit' => Pages\EditEncounter::route('/{record}/edit'),
+			'run' => Pages\RunEncounter::route('/{record}/run'),
 		];
+	}
+
+	public static function getActions(): array
+	{
+		return [
+			Actions\Action::make('testAction')
+						  ->label('Test Action')
+						  ->action(function () {
+							  // ...
+						  }),
+		];
+		/*return [
+			Actions\Action::make('startEncounter')
+						  ->label('Start Encounter')
+						  ->icon('heroicon-o-play')
+						  ->action(function (Encounter $record) {
+							  $characters = $record->characters;
+
+							  $initiativeOrder = $characters->sortByDesc('initiative_roll')->values();
+
+							  $order = 1;
+							  foreach ($initiativeOrder as $character) {
+								  $record->characters()->updateExistingPivot($character->id, ['order' => $order]);
+								  $order++;
+							  }
+
+							  $record->update(['current_turn' => 1, 'current_round' => 1]);
+							  Notification::make()->title('Encounter Started')->success()->send();
+						  }),
+			Actions\Action::make('nextTurn')
+						  ->label('Next Turn')
+						  ->icon('heroicon-o-arrow-right')
+						  ->requiresConfirmation()
+						  ->action(function (Encounter $record, \Livewire\Component $livewire) {
+							  $characterCount = $record->characters->count();
+							  if ($record->current_turn < $characterCount) {
+								  $record->current_turn++;
+							  } else {
+								  $record->current_turn = 1;
+								  $record->current_round++;
+							  }
+							  $record->save();
+							  $livewire->dispatch('refresh');
+						  }),
+			Actions\Action::make('viewDashboard')
+						  ->label('View Dashboard')
+						  ->url(fn (Encounter $record): string => route('encounter.dashboard', ['encounterId' => $record->id]))
+						  ->openUrlInNewTab(),
+		];*/
 	}
 }

@@ -11,11 +11,12 @@ class Encounter extends Model
 
 	protected $fillable = [
 		'name',
-		'round_count',
+		'current_round',
+		'current_turn',
 	];
 
 	public function characters()
 	{
-		return $this->belongsToMany(Character::class, 'encounter_character')->withPivot('initiative_roll', 'current_turn');
+		return $this->belongsToMany(Character::class, 'encounter_character')->withPivot('initiative_roll', 'order');
 	}
 }

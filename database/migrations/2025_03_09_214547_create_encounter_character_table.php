@@ -16,7 +16,7 @@ return new class extends Migration
 			$table->foreignId('encounter_id')->constrained()->cascadeOnDelete();
 			$table->foreignId('character_id')->constrained()->cascadeOnDelete();
 			$table->integer('initiative_roll')->nullable();
-			$table->boolean('current_turn')->default(false);
+			$table->integer('order')->nullable();
 			$table->timestamps();
 		});
 	}

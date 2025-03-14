@@ -19,7 +19,7 @@ class Character extends Model
 
 	public function encounters()
 	{
-		return $this->belongsToMany(Encounter::class, 'encounter_character')->withPivot('initiative_roll', 'current_turn');
+		return $this->belongsToMany(Encounter::class, 'encounter_character')->withPivot('initiative_roll', 'order');
 	}
 
 }

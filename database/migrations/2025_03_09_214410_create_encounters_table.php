@@ -14,7 +14,8 @@ return new class extends Migration
 		Schema::create('encounters', function (Blueprint $table) {
 			$table->id();
 			$table->string('name');
-			$table->integer('round_count')->default(0);
+			$table->integer('current_round')->default(0);
+			$table->integer('current_turn')->default(0);
 			$table->timestamps();
 		});
 	}
