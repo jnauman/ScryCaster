@@ -13,6 +13,12 @@ class Character extends Model
 		'name',
 		'type',
 		'ac',
+		'strength',
+		'dexterity',
+		'constitution',
+		'intelligence',
+		'wisdom',
+		'charisma',
 		'max_health',
 		'current_health',
 	];

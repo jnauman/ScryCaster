@@ -62,49 +62,4 @@ class EncounterResource extends Resource
 			'run' => Pages\RunEncounter::route('/{record}/run'),
 		];
 	}
-
-	public static function getActions(): array
-	{
-		return [
-
-		];
-		/*return [
-			Actions\Action::make('startEncounter')
-						  ->label('Start Encounter')
-						  ->icon('heroicon-o-play')
-						  ->action(function (Encounter $record) {
-							  $characters = $record->characters;
-
-							  $initiativeOrder = $characters->sortByDesc('initiative_roll')->values();
-
-							  $order = 1;
-							  foreach ($initiativeOrder as $character) {
-								  $record->characters()->updateExistingPivot($character->id, ['order' => $order]);
-								  $order++;
-							  }
-
-							  $record->update(['current_turn' => 1, 'current_round' => 1]);
-							  Notification::make()->title('Encounter Started')->success()->send();
-						  }),
-			Actions\Action::make('nextTurn')
-						  ->label('Next Turn')
-						  ->icon('heroicon-o-arrow-right')
-						  ->requiresConfirmation()
-						  ->action(function (Encounter $record, \Livewire\Component $livewire) {
-							  $characterCount = $record->characters->count();
-							  if ($record->current_turn < $characterCount) {
-								  $record->current_turn++;
-							  } else {
-								  $record->current_turn = 1;
-								  $record->current_round++;
-							  }
-							  $record->save();
-							  $livewire->dispatch('refresh');
-						  }),
-			Actions\Action::make('viewDashboard')
-						  ->label('View Dashboard')
-						  ->url(fn (Encounter $record): string => route('encounter.dashboard', ['encounterId' => $record->id]))
-						  ->openUrlInNewTab(),
-		];*/
-	}
 }

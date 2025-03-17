@@ -6,6 +6,7 @@ use App\Filament\Resources\CharacterResource\Pages;
 use App\Filament\Resources\CharacterResource\RelationManagers;
 use App\Models\Character;
 use Filament\Forms;
+use Filament\Forms\Components;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -30,6 +31,12 @@ class CharacterResource extends Resource
 															  'monster' => 'Monster',
 														  ])->required(),
 						 Forms\Components\TextInput::make('ac')->label('Armor Class')->numeric()->required(),
+						 Forms\Components\TextInput::make('strength')->label('Strength')->numeric(),
+						 Forms\Components\TextInput::make('dexterity')->label('Dexterity')->numeric(),
+						 Forms\Components\TextInput::make('constitution')->label('Constitution')->numeric(),
+						 Forms\Components\TextInput::make('intelligence')->label('Intelligence')->numeric(),
+						 Forms\Components\TextInput::make('wisdom')->label('Wisdom')->numeric(),
+						 Forms\Components\TextInput::make('charisma')->label('Charisma')->numeric(),
 						 Forms\Components\TextInput::make('max_health')->label('Max Health')->numeric()->required(),
 						 Forms\Components\TextInput::make('current_health')->label('Current Health')->numeric()->required(),
 					 ]);

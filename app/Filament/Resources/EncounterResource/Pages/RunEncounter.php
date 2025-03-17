@@ -20,6 +20,7 @@ class RunEncounter extends ViewRecord
 	{
 
 		$characterCount = $this->record->characters->count();
+
 		if ($this->record->current_turn < $characterCount) {
 			$this->record->current_turn++;
 		} else {

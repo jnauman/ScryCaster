@@ -31,7 +31,7 @@ const app = createApp({
 				// Toggle Classes
 				const listItems = document.querySelectorAll('#encounter-' + window.encounterId + ' li');
 				listItems.forEach(li => {
-					const order = parseInt(li.querySelector('span:nth-child(2)').textContent.replace('Order: ', ''));
+					const order = parseInt(li.dataset.order);
 					if (order === currentTurn) {
 						li.classList.add('bg-[var(--color-accent)]', 'border', 'border-[var(--color-accent-foreground)]', 'text-[var(--color-accent-foreground)]');
 						li.classList.remove('bg-[var(--color-accent-content)]');
