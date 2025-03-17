@@ -23,16 +23,43 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
-    --color-accent-foreground: var(--color-white);
+    --color-fuchsia-pink-50: #fbf5fe;
+    --color-fuchsia-pink-100: #f7ebfc;
+    --color-fuchsia-pink-200: #f0d6f8;
+    --color-fuchsia-pink-300: #e5b5f2;
+    --color-fuchsia-pink-400: #d589e9;
+    --color-fuchsia-pink-500: #c15bda;
+    --color-fuchsia-pink-600: #b14cc7;
+    --color-fuchsia-pink-700: #8b2e9d;
+    --color-fuchsia-pink-800: #742880;
+    --color-fuchsia-pink-900: #61256a;
+    --color-fuchsia-pink-950: #3e0d45;
+
+    --color-havelock-blue-50: #f0f7fe;
+    --color-havelock-blue-100: #deecfb;
+    --color-havelock-blue-200: #c4dff9;
+    --color-havelock-blue-300: #9bcaf5;
+    --color-havelock-blue-400: #6badef;
+    --color-havelock-blue-500: #5596ea;
+    --color-havelock-blue-600: #3372dd;
+    --color-havelock-blue-700: #2b5dca;
+    --color-havelock-blue-800: #284da5;
+    --color-havelock-blue-900: #264382;
+    --color-havelock-blue-950: #1b2a50;
+
+
+
+
+    --color-accent: var(--color-havelock-blue-400);
+    --color-accent-content: var(--color-havelock-blue-600);
+    --color-accent-foreground: var(--color-havelock-blue-900);
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: var(--color-havelock-blue-400);
+        --color-accent-content: var(--color-havelock-blue-600);
+        --color-accent-foreground: var(--color-havelock-blue-950);
     }
 }
 

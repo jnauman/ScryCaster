@@ -66,11 +66,7 @@ class EncounterResource extends Resource
 	public static function getActions(): array
 	{
 		return [
-			Actions\Action::make('testAction')
-						  ->label('Test Action')
-						  ->action(function () {
-							  // ...
-						  }),
+
 		];
 		/*return [
 			Actions\Action::make('startEncounter')
