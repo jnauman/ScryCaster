@@ -1,13 +1,10 @@
 
 <x-filament-panels::page>
-    <div id="app">
-    </div>
-
     <div class="p-4">
         @if ($record)
             <h1 class="text-2xl font-bold mb-4">Run Encounter: {{ $record->name }}</h1>
             <p class="text-lg mb-2">Round: {{ $record->current_round }}</p>
-            <div id="encounter-{{ $record->id }}">
+            <div id="encounter-{{ $record->id }}" class="mb-4">
                 <ul class="space-y-2">
                     @foreach ($record->characters->sortBy('pivot.order') as $character)
                         <li class="p-3 rounded-lg @if ($character->pivot->order == $record->current_turn) bg-[var(--color-accent)]  border border-[var(--coloraccent-foreground @else  bg-[var(--color-accent-content)] @endif">
@@ -19,7 +16,7 @@
                 </ul>
             </div>
 
-            <button wire:click="nextTurn" class="mt-4 bg-gray-100 hover:bg-gray-700 text-blue font-bold py-2 px-4 rounded">
+            <button wire:click="nextTurn" class="mt-4 bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg">
                 Next Turn
             </button>
         @else
@@ -28,9 +25,6 @@
     </div>
    {{-- @vite(['resources/css/app.css', 'resources/js/app.js'])--}}
 @vite('resources/css/app.css')
-<script>
-	window.encounterId = {{ $record->id }};
-	window.initialCurrentTurn = {{ $record->current_turn }};
-</script>
+
 </x-filament-panels::page>
 

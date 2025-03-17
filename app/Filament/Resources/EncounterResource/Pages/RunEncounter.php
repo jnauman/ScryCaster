@@ -29,8 +29,8 @@ class RunEncounter extends ViewRecord
 
 		$this->record->save();
 		// In your Laravel code where you broadcast the event
-		event(new TurnChanged($this->record->id, $this->record->current_turn));
-		broadcast(new TurnChanged($this->record->id, $this->record->current_turn));
+		event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
+		//broadcast(new TurnChanged($this->record->id, $this->record->current_turn));
 
 		//$this->mount($this->record->id);
 

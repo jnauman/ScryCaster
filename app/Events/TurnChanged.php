@@ -17,16 +17,16 @@ class TurnChanged implements ShouldBroadcast
 
 	public $encounterId;
 	public $currentTurn;
+	public $currentRound;
 
 	/**
 	 * Create a new event instance.
 	 */
-	public function __construct($encounterId, $currentTurn)
+	public function __construct($encounterId, $currentTurn, $currentRound)
 	{
-		Log::info('TurnChanged event created: encounterId=' . $encounterId . ', currentTurn=' . $currentTurn); // Add this line
-
 		$this->encounterId = $encounterId;
 		$this->currentTurn = $currentTurn;
+		$this->currentRound = $currentRound;
 	}
 	public function broadcastOn()
 	{

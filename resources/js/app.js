@@ -10,39 +10,52 @@ window.Echo = new Echo({
 	cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
 	forceTLS: true
 });
-window.Echo.channel('encounter').listen('TurnChanged', (event) => {
-	console.log('Basic listener: TurnChanged event received:', event);
-});
+
+// Enable Pusher logging for debugging
+//window.Pusher.logToConsole = true;
+
 const app = createApp({
 	setup() {
-		const currentTurn = ref(window.initialCurrentTurn); // Initialize currentTurn
-		const encounterId = ref(window.encounterId); // Initialize encounterId
+		const message = ref(''); // Reactive variable for the message
 
 		onMounted(() => {
-			console.log('Echo is Ready!');
-			console.log("Encounter ID:", encounterId.value); // Add this line
+			//console.log('Vue component mounted, setting up listener.');
 
-			window.Echo.channel('encounter')
-				.listen('TurnChanged', (event) => {
-					console.log('Current Turn Updated:');
-					// Parse the JSON string
-					const parsedData = JSON.parse(event.data);
-					currentTurn.value = parsedData.currentTurn;
-					console.log('Current Turn Updated:', currentTurn.value);
+			window.Echo.channel('encounter').listen('.TurnChanged', (event) => {
+				const currentTurn = event.currentTurn;
+				const currentRound = event.currentRound;
+
+				// Update Round Display
+				document.querySelector('.text-lg.mb-2').textContent = `Round: ${currentRound}`;
+
+				// Toggle Classes
+				const listItems = document.querySelectorAll('#encounter-' + window.encounterId + ' li');
+				listItems.forEach(li => {
+					const order = parseInt(li.querySelector('span:nth-child(2)').textContent.replace('Order: ', ''));
+					if (order === currentTurn) {
+						li.classList.add('bg-[var(--color-accent)]', 'border', 'border-[var(--color-accent-foreground)]', 'text-[var(--color-accent-foreground)]');
+						li.classList.remove('bg-[var(--color-accent-content)]');
+					} else {
+						li.classList.remove('bg-[var(--color-accent)]', 'border', 'border-[var(--color-accent-foreground)]', 'text-[var(--color-accent-foreground)]');
+						li.classList.add('bg-[var(--color-accent-content)]');
+					}
 				});
+
+				//console.log('Player Turn Updated:', currentTurn, currentRound);
+			});
 		});
 
 		return {
-			currentTurn,
-			encounterId // Expose encounterId if needed in the template
+			message, // Expose the message variable to the template
 		};
 	},
 	template: `
-        <div>
-            <h1>Testing Vue</h1>
-            <p>Current Turn: {{ currentTurn }}</p>
-        </div>
+<!--        <div>
+            <h1>Pusher Test</h1>
+            <p>Received Message: {{ message }}</p>
+        </div>-->
     `
 });
 
-app.mount('#app'); // Mount to a specific ID for testing
+app.mount('#app'); // Mount the Vue component to the #app element
+
