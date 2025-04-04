@@ -89,8 +89,34 @@ select:focus[data-flux-control] {
 }
 
 #encounter-image {
-    max-height: 400px; /* Adjust height as needed */
-    width: auto;
+    /* max-height: 400px; */ /* <-- Comment out or remove this line */
+    width: auto; /* This might also be redundant now, can likely remove */
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Player - Not Current Turn */
+.player-not-turn {
+    background-color: var(--color-havelock-blue-900);
+    border: 1px solid var(--color-havelock-blue-900);
+}
+
+/* Player - Current Turn */
+.player-current-turn {
+    background-color: var(--color-havelock-blue-400);
+    border: 1px solid var(--color-havelock-blue-900);
+    color: #aa2222;
+}
+
+/* Monster - Not Current Turn */
+.monster-not-turn {
+    background-color: var(--color-fuchsia-pink-900);
+    border: 1px solid var(--color-fuchsia-pink-900);
+}
+
+/* Monster - Current Turn */
+.monster-current-turn {
+    background-color: var(--color-fuchsia-pink-400);
+    border: 1px solid var(--color-fuchsia-pink-900);
+    color: #aa2222;
 }

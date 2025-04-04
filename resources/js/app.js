@@ -32,12 +32,24 @@ const app = createApp({
 				const listItems = document.querySelectorAll('#encounter-' + window.encounterId + ' li');
 				listItems.forEach(li => {
 					const order = parseInt(li.dataset.order);
-					if (order === currentTurn) {
-						li.classList.add('bg-[var(--color-accent)]', 'border', 'border-[var(--color-accent-foreground)]', 'text-[var(--color-accent-foreground)]');
-						li.classList.remove('bg-[var(--color-accent-content)]');
+					const isMonster = li.classList.contains('monster-not-turn') || li.classList.contains('monster-current-turn');
+
+					if (order === event.currentTurn) {
+						if (isMonster) {
+							li.classList.remove('monster-not-turn');
+							li.classList.add('monster-current-turn');
+						} else {
+							li.classList.remove('player-not-turn');
+							li.classList.add('player-current-turn');
+						}
 					} else {
-						li.classList.remove('bg-[var(--color-accent)]', 'border', 'border-[var(--color-accent-foreground)]', 'text-[var(--color-accent-foreground)]');
-						li.classList.add('bg-[var(--color-accent-content)]');
+						if (isMonster) {
+							li.classList.remove('monster-current-turn');
+							li.classList.add('monster-not-turn');
+						} else {
+							li.classList.remove('player-current-turn');
+							li.classList.add('player-not-turn');
+						}
 					}
 				});
 
