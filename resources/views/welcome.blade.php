@@ -60,7 +60,7 @@
             {{-- ScryCaster Logo Placeholder --}}
             <div class="mb-6">
                 {{-- Replace with your actual logo --}}
-                <img src="/images/logo_03.jpeg" alt="ScryCaster Logo" class="h-12 w-auto">
+                <img src="/images/logo_03.jpeg" alt="ScryCaster Logo" class="">
                 {{-- Example with SVG: <svg ...> your logo code </svg> --}}
             </div>
 
