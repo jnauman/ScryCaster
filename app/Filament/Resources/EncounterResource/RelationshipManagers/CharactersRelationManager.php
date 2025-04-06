@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\EncounterResource\RelationManagers;
+namespace App\Filament\Resources\EncounterResource\RelationshipManagers;
 
 use App\Models\Character;
 use Filament\Forms;
