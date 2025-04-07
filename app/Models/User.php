@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Notifications\Notifiable;
@@ -64,5 +65,21 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
 	{
 		//return str_ends_with($this->email, '@yourdomain.com') && $this->hasVerifiedEmail();
 		return $this->hasVerifiedEmail();
+	}
+
+	/**
+	 * Get the characters owned by the user.
+	 */
+	public function characters(): HasMany
+	{
+		return $this->hasMany(Character::class);
+	}
+
+	/**
+	 * Get the campaigns run by the user (as GM).
+	 */
+	public function campaignsGm(): HasMany
+	{
+		return $this->hasMany(Campaign::class, 'gm_user_id');
 	}
 }

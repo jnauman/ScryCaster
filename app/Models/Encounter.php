@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Encounter extends Model
 {
@@ -13,6 +15,7 @@ class Encounter extends Model
 		'name',
 		'current_round',
 		'current_turn',
+		'campaign_id',
 	];
 
 	public function calculateOrder()
@@ -36,5 +39,13 @@ class Encounter extends Model
 	public function characters()
 	{
 		return $this->belongsToMany(Character::class, 'encounter_character')->withPivot('initiative_roll', 'order');
+	}
+
+	/**
+	 * Get the campaign this encounter belongs to.
+	 */
+	public function campaign(): BelongsTo
+	{
+		return $this->belongsTo(Campaign::class);
 	}
 }
