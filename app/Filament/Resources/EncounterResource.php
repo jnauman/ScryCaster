@@ -14,6 +14,7 @@ use Filament\Actions;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class EncounterResource extends Resource
 {
@@ -23,10 +24,31 @@ class EncounterResource extends Resource
 
 	public static function form(Form $form): Form
 	{
-		return $form->schema([
-								 Forms\Components\TextInput::make('name')->required(),
-								 Forms\Components\TextInput::make('current_round')->numeric()->default(0)->required(),
-							 ]);
+		return $form
+			->schema([
+						 // Add this Select field for Campaign
+						 Forms\Components\Select::make('campaign_id')
+												->label('Campaign')
+												->relationship(
+													name: 'campaign', // Relationship method name on Encounter model
+													titleAttribute: 'name', // Column to display from Campaign model
+													// Modify query to only show campaigns belonging to the current GM
+													modifyQueryUsing: fn (Builder $query) => $query->where('gm_user_id', Auth::id())
+												)
+												->searchable()
+												->preload() // Good for shorter lists of campaigns
+												->required() // Make selecting a campaign mandatory
+												->native(false), // Use Filament's styled dropdown
+
+						 // Existing fields (add any others needed for an encounter)
+						 Forms\Components\TextInput::make('name')
+												   ->required()
+												   ->maxLength(255),
+
+						 // Other fields like current_round, current_turn might be set later
+						 // or have defaults, so may not need to be in the create form.
+
+					 ]);
 	}
 
 	public static function table(Table $table): Table

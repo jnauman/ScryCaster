@@ -39,7 +39,9 @@ class CharactersRelationManager extends RelationManager
 					  ])
 			->headerActions([
 								Tables\Actions\AttachAction::make()
+									->preloadRecordSelect() // Preloads options for better performance/UX
 									->recordTitle(fn (Character $record): string => "{$record->name} - {$record->type}")
+									->multiple()
 									->recordSelectSearchColumns(['name']),
 								Tables\Actions\CreateAction::make(),
 							])
