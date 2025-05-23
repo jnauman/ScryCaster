@@ -90,9 +90,8 @@ select:focus[data-flux-control] {
 
 #encounter-image {
     /* max-height: 400px; */ /* <-- Comment out or remove this line */
-    width: auto; /* This might also be redundant now, can likely remove */
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* width: auto; */ /* Removed as it's often default or better handled by Tailwind width classes in the template */
+    @apply rounded-lg shadow-md;
 }
 
 /* Player - Not Current Turn */

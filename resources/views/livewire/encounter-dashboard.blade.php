@@ -11,15 +11,7 @@
                     <ul class="space-y-2">
                         @foreach ($encounter->characters->sortBy('pivot.order') as $character)
                             <li class="p-3 rounded-lg flex items-center justify-between
-                                @if ($character->type == 'monster' && $character->pivot->order != $encounter->current_turn)
-                                    monster-not-turn
-                                @elseif ($character->type == 'monster' && $character->pivot->order == $encounter->current_turn)
-                                    monster-current-turn
-                                @elseif ($character->type == 'player' && $character->pivot->order != $encounter->current_turn)
-                                    player-not-turn
-                                @else
-                                    player-current-turn
-                                @endif
+                                {{ $character->getListItemCssClasses($encounter->current_turn) }}
                             " data-order="{{ $character->pivot->order }}">
                                 <div class="flex-grow">
                                     <span class="font-semibold">{{ $character->name }}</span>
