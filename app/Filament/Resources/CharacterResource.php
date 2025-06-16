@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile; // Required for type hinting in afterStateUpdated
 
 /**
  * Filament Resource for managing Character models.
@@ -38,6 +39,68 @@ class CharacterResource extends Resource
 	{
 		return $form
 			->schema([
+				Forms\Components\FileUpload::make('data')
+					->label('Character Data')
+					->acceptedFileTypes(['application/json'])
+					->maxSize(1024) // Max size in kilobytes (1MB)
+					->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+						// Initial checks for the state of the uploaded file
+						if (! $state instanceof UploadedFile) {
+							// Not an uploaded file instance (e.g., initial null state, or file removed by user)
+							// Clear all related form fields or reset to defaults
+							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'data'];
+							foreach ($fieldsToReset as $field) {
+								$set($field, $get($field)); // $get($field) should give the original default from schema
+							}
+							$set('data', null); // Explicitly nullify the parsed data container
+							return;
+						}
+
+						if (!$state->isValid()) {
+							// File was uploaded but is not valid (e.g., upload error, too large after initial client check)
+							// Similar logic to clear/reset fields might be desired, or show a specific error
+							// For now, just return, but one might want to clear fields too.
+							return;
+						}
+
+						$content = file_get_contents($state->getRealPath());
+						if ($content === false) {
+							// Handle file read error, maybe log it or show a notification
+							return;
+						}
+
+						$parsedData = static::parseCharacterJson($content);
+
+						if ($parsedData === null) {
+							// JSON parsing failed (invalid JSON)
+							// Clear fields or set to defaults, and optionally notify the user
+							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'data'];
+							foreach ($fieldsToReset as $field) {
+                                $currentSchemaDefault = match($field) {
+                                    'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma' => 10, // Based on schema defaults
+                                    default => null,
+                                };
+								$set($field, $currentSchemaDefault);
+							}
+                            $set('data', null);
+							// Optionally: Filament::notify('danger', 'Invalid JSON file. Could not parse character data.');
+							return;
+						}
+
+						// Successfully parsed, now set form fields
+						$set('data', $parsedData['data']); // Full original JSON
+						$set('name', $parsedData['name']);
+						$set('ac', $parsedData['ac']);
+						$set('max_health', $parsedData['max_health'] ?? $get('max_health'));
+						$set('current_health', $parsedData['current_health'] ?? $get('current_health'));
+						$set('strength', $parsedData['strength'] ?? $get('strength'));
+						$set('dexterity', $parsedData['dexterity'] ?? $get('dexterity'));
+						$set('constitution', $parsedData['constitution'] ?? $get('constitution'));
+						$set('intelligence', $parsedData['intelligence'] ?? $get('intelligence'));
+						$set('wisdom', $parsedData['wisdom'] ?? $get('wisdom'));
+						$set('charisma', $parsedData['charisma'] ?? $get('charisma'));
+					})
+					->columnSpanFull(),
 				Forms\Components\TextInput::make('name')
 					->label('Character Name')
 					->required()
@@ -131,5 +194,45 @@ class CharacterResource extends Resource
 			'create' => Pages\CreateCharacter::route('/create'), // Character creation page.
 			'edit' => Pages\EditCharacter::route('/{record}/edit'), // Character editing page.
 		];
+	}
+
+	public static function parseCharacterJson(string $jsonContent): ?array
+	{
+		$decodedJson = json_decode($jsonContent, true);
+
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			return null; // Invalid JSON
+		}
+
+		$outputData = [];
+		$outputData['data'] = $decodedJson; // Store the whole original JSON
+
+		$outputData['name'] = $decodedJson['name'] ?? null;
+		$outputData['ac'] = $decodedJson['armorClass'] ?? null;
+
+		if (isset($decodedJson['maxHitPoints'])) {
+			$outputData['max_health'] = $decodedJson['maxHitPoints'];
+			// Default current_health to max_health if maxHitPoints is present
+			$outputData['current_health'] = $decodedJson['maxHitPoints'];
+		} else {
+			$outputData['max_health'] = null; // Or a schema default if accessible
+			$outputData['current_health'] = null; // Or a schema default
+		}
+
+		if (isset($decodedJson['stats'])) {
+			$stats = $decodedJson['stats'];
+			$outputData['strength'] = $stats['STR'] ?? null;
+			$outputData['dexterity'] = $stats['DEX'] ?? null;
+			$outputData['constitution'] = $stats['CON'] ?? null;
+			$outputData['intelligence'] = $stats['INT'] ?? null;
+			$outputData['wisdom'] = $stats['WIS'] ?? null;
+			$outputData['charisma'] = $stats['CHA'] ?? null;
+		} else {
+			// If 'stats' block is missing, set all stats to null (or schema defaults if accessible)
+			foreach (['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as $statField) {
+				$outputData[$statField] = null;
+			}
+		}
+		return $outputData;
 	}
 }
