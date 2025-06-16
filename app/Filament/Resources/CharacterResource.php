@@ -39,20 +39,21 @@ class CharacterResource extends Resource
 	{
 		return $form
 			->schema([
-				Forms\Components\FileUpload::make('data')
-					->label('Character Data')
+				Forms\Components\FileUpload::make('character_json_upload')
+					->label('Character JSON File')
 					->acceptedFileTypes(['application/json'])
 					->maxSize(1024) // Max size in kilobytes (1MB)
 					->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
 						// Initial checks for the state of the uploaded file
+						// $state here is the state of 'character_json_upload'
 						if (! $state instanceof UploadedFile) {
 							// Not an uploaded file instance (e.g., initial null state, or file removed by user)
-							// Clear all related form fields or reset to defaults
-							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'data'];
+							// Clear all related form fields by setting them to their original schema defaults or null
+							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 							foreach ($fieldsToReset as $field) {
-								$set($field, $get($field)); // $get($field) should give the original default from schema
+								$set($field, $get($field)); // $get($field) will provide the schema default if one is defined, otherwise null for non-FileUpload fields
 							}
-							$set('data', null); // Explicitly nullify the parsed data container
+							$set('data', null); // Specifically ensure the 'data' field (for DB JSON) is nulled. $get('data') would refer to the FileUpload.
 							return;
 						}
 
@@ -73,16 +74,12 @@ class CharacterResource extends Resource
 
 						if ($parsedData === null) {
 							// JSON parsing failed (invalid JSON)
-							// Clear fields or set to defaults, and optionally notify the user
-							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'data'];
+							// Clear all related form fields by setting them to their original schema defaults or null
+							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 							foreach ($fieldsToReset as $field) {
-                                $currentSchemaDefault = match($field) {
-                                    'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma' => 10, // Based on schema defaults
-                                    default => null,
-                                };
-								$set($field, $currentSchemaDefault);
+								$set($field, $get($field)); // Reset to schema default or null
 							}
-                            $set('data', null);
+                            $set('data', null); // Specifically ensure the 'data' field (for DB JSON) is nulled.
 							// Optionally: Filament::notify('danger', 'Invalid JSON file. Could not parse character data.');
 							return;
 						}

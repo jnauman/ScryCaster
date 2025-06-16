@@ -201,4 +201,53 @@ test('uploading valid json missing some fields populates available fields', func
     $livewireTest->assertHasNoFormErrors(); // Assuming missing fields are not required by the JSON schema itself at this stage
 });
 
+test('can create character with valid json upload', function () {
+    $jsonContent = json_encode([
+        'name' => 'Uploaded Test Character',
+        'armorClass' => 16,
+        'maxHitPoints' => 60,
+        'stats' => [
+            'STR' => 14,
+            'DEX' => 13,
+            'CON' => 15,
+            'INT' => 10,
+            'WIS' => 12,
+            'CHA' => 8,
+        ],
+        'source' => 'JSON Upload Sourcebook'
+    ]);
+
+    $fakeFile = UploadedFile::fake()->createWithContent('character.json', $jsonContent);
+
+    Livewire::test(CharacterResource\Pages\CreateCharacter::class)
+        ->fillForm([ // Fill any other required fields not covered by JSON parsing.
+            'type' => 'player', // 'type' is required in the schema
+        ])
+        ->set('data.character_json_upload', $fakeFile) // Set the file for the upload component
+        // The afterStateUpdated hook should now populate other fields based on the JSON.
+        // Then we call the create action.
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    // Assert the character was created in the database
+    $this->assertDatabaseHas('characters', [
+        'name' => 'Uploaded Test Character',
+        'ac' => 16,
+        'max_health' => 60,
+        'current_health' => 60, // Assuming current_health is set to max_health by the hook
+        'strength' => 14,
+        'dexterity' => 13,
+        'constitution' => 15,
+        'intelligence' => 10,
+        'wisdom' => 12,
+        'charisma' => 8,
+        'type' => 'player', // Ensure this was also saved
+    ]);
+
+    // Assert the 'data' JSON column
+    $character = Character::latest()->first();
+    expect($character)->not->toBeNull();
+    expect($character->data)->toBe(json_decode($jsonContent, true)); // Compare as arrays/objects
+});
+
 ?>
