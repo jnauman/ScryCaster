@@ -23,7 +23,7 @@ class EditEncounter extends EditRecord
 					  $record->calculateOrder();
 					  $record->current_turn = 1;
 					  $record->save();
-					  return redirect(route('filament.admin.resources.encounters.run', $record));
+					  return redirect(route('filament.app.resources.encounters.run', $record));
 
 				  }),
         ];
