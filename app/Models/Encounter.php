@@ -42,35 +42,54 @@ class Encounter extends Model
 	 *
 	 * @return void
 	 */
-	public function calculateOrder(): void
-	{
-		// TODO: This method needs to be refactored to handle both playerCharacters and monsterInstances.
-		// The current logic is specific to the old characters() relationship.
-		// For now, commenting out to prevent errors. A full redesign of initiative handling
-		// across player characters and monster instances will be required.
+public function calculateOrder(): void
+{
+    $combatants = collect();
 
-		/*
-		// Retrieve characters associated with this encounter, ordered by initiative roll (descending)
-		$characters = $this->playerCharacters()->orderBy('pivot_initiative_roll', 'desc')->get();
+    // Add player characters
+    // Ensure pivot data is loaded if not already implicitly handled by ->get() on a BelongsToMany relationship
+    $this->playerCharacters()->get()->each(function ($pc) use ($combatants) {
+        $combatants->push([
+            'id' => $pc->id,
+            'type' => 'player',
+            'initiative_roll' => $pc->pivot->initiative_roll ?? 0, // initiative_roll from pivot
+            'dexterity_for_tiebreak' => $pc->dexterity ?? 10,     // dexterity from Character model
+            'original_model' => $pc
+        ]);
+    });
 
-		// Further group by initiative roll to handle ties
-		$groupedByInitiative = $characters->groupBy('pivot.initiative_roll');
+    // Add monster instances
+    $this->monsterInstances()->with('monster')->get()->each(function ($mi) use ($combatants) { // Eager load monster for dexterity
+        $combatants->push([
+            'id' => $mi->id,
+            'type' => 'monster_instance',
+            'initiative_roll' => $mi->initiative_roll ?? 0,          // initiative_roll from MonsterInstance model
+            'dexterity_for_tiebreak' => $mi->monster->dexterity ?? 10, // dexterity from related Monster model
+            'original_model' => $mi
+        ]);
+    });
 
-		$order = 1;
-		foreach ($groupedByInitiative as $initiativeGroup) {
-			// Sort characters within the same initiative group by dexterity (descending) to break ties
-			$sortedGroup = $initiativeGroup->sortByDesc(function ($character) {
-				return $character->dexterity; // Assumes Character model has a 'dexterity' attribute
-			});
+    // Sort the combatants
+    // Primary sort by initiative_roll (desc), secondary by dexterity_for_tiebreak (desc)
+    $sortedCombatants = $combatants->sortByDesc(function ($combatant) {
+        return sprintf('%03d-%03d', $combatant['initiative_roll'], $combatant['dexterity_for_tiebreak']);
+    })->values(); // values() re-indexes the collection
 
-			foreach ($sortedGroup as $character) {
-				// Update the 'order' in the pivot table for each character
-				$this->playerCharacters()->updateExistingPivot($character->id, ['order' => $order]);
-				$order++;
-			}
-		}
-		*/
-	}
+
+    // Update order
+    $orderIndex = 1;
+    foreach ($sortedCombatants as $combatantData) {
+        if ($combatantData['type'] === 'player') {
+            // For BelongsToMany, updateExistingPivot is used.
+            $this->playerCharacters()->updateExistingPivot($combatantData['id'], ['order' => $orderIndex]);
+        } elseif ($combatantData['type'] === 'monster_instance') {
+            // For HasMany, update the model instance directly.
+            $monsterInstance = $combatantData['original_model'];
+            $monsterInstance->update(['order' => $orderIndex]);
+        }
+        $orderIndex++;
+    }
+}
 
 	/**
 	 * Defines the many-to-many relationship with player characters participating in this encounter.

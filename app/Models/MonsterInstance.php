@@ -27,4 +27,22 @@ class MonsterInstance extends Model
     {
         return $this->belongsTo(Encounter::class);
     }
+
+    /**
+     * Generates CSS classes for displaying this monster instance in an encounter list.
+     *
+     * @param int $currentEncounterTurn The order number of the combatant whose turn it currently is.
+     * @return string A string of CSS classes.
+     */
+    public function getListItemCssClasses(int $currentEncounterTurn): string
+    {
+        $baseType = 'monster'; // Or 'monster-instance' for more specific styling
+        $isCurrentTurn = (isset($this->order) && $this->order == $currentEncounterTurn);
+
+        if ($isCurrentTurn) {
+            return "{$baseType}-current-turn";
+        } else {
+            return "{$baseType}-not-turn";
+        }
+    }
 }

@@ -19,7 +19,7 @@ class EditEncounter extends EditRecord
 			Action::make('startEncounter')
 				  ->label('Start Encounter')
 				  ->action(function (Encounter $record) {
-					  $record->load('characters');
+					  $record->load('playerCharacters'); // Changed 'characters' to 'playerCharacters'
 					  $record->calculateOrder();
 					  $record->current_turn = 1;
 					  $record->save();

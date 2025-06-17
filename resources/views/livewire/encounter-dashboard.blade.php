@@ -6,26 +6,43 @@
         <p class="text-lg mb-2">Round: {{ $encounter->current_round }}</p>
 
         <div class="flex w-full items-start h-[calc(100vh-200px)]">
-            <div class="w-[500px] flex-shrink-0 pr-4 overflow-y-auto">
-                <div id="encounter-{{ $encounter->id }}">
+            {{-- Combatants List --}}
+            <div class="w-[500px] flex-shrink-0 pr-4 overflow-y-auto h-full">
+                <div id="encounter-{{ $encounter->id }}-combatants">
                     <ul class="space-y-2">
-                        @foreach ($encounter->characters->sortBy('pivot.order') as $character)
-                            <li class="p-3 rounded-lg flex items-center justify-between
-                                {{ $character->getListItemCssClasses($encounter->current_turn) }}
-                            " data-order="{{ $character->pivot->order }}">
+                        @forelse ($combatants as $combatant)
+                            <li class="p-3 rounded-lg flex items-center justify-between transition-all duration-150 ease-in-out
+                                {{ $combatant['css_classes'] }}
+                            " data-order="{{ $combatant['order'] }}" wire:key="combatant-{{ $combatant['type'] }}-{{ $combatant['id'] }}">
                                 <div class="flex-grow">
-                                    <span class="font-semibold">{{ $character->name }}</span>
+                                    <span class="font-semibold text-lg">{{ $combatant['name'] }}</span>
+                                    <span class="text-xs ml-1">({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})</span>
+                                    <div class="text-sm">
+                                        AC: {{ $combatant['ac'] }}
+                                    </div>
                                 </div>
-                                <div class="text-sm">
-                                    <span>Init: {{ $character->pivot->initiative_roll }}</span>
+                                <div class="flex items-center space-x-2">
+                                    <label for="hp-{{ $combatant['type'] }}-{{ $combatant['id'] }}" class="text-sm">HP:</label>
+                                    <input type="number" id="hp-{{ $combatant['type'] }}-{{ $combatant['id'] }}"
+                                           wire:change="updateCombatantHealth({{ $combatant['id'] }}, '{{ $combatant['type'] }}', $event.target.value)"
+                                           value="{{ $combatant['current_hp'] }}"
+                                           class="w-20 p-1 border rounded text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                           min="0" max="{{ $combatant['max_hp'] }}">
+                                    <span class="text-sm">/ {{ $combatant['max_hp'] }}</span>
+                                </div>
+                                <div class="text-sm ml-3">
+                                    <span>Init: {{ $combatant['original_model']->initiative_roll ?? ($combatant['original_model']->pivot->initiative_roll ?? 'N/A') }}</span>
                                 </div>
                             </li>
-                        @endforeach
+                        @empty
+                            <li class="p-3 text-gray-500">No combatants in this encounter yet.</li>
+                        @endforelse
                     </ul>
                 </div>
             </div>
 
-            <div class="flex-grow pl-4 flex flex-col self-stretch">
+            {{-- Encounter Image Area --}}
+            <div class="flex-grow pl-4 flex flex-col self-stretch h-full">
                 <div class="flex justify-center items-center flex-grow h-full">
                     {{--<img id="encounter-image" src="/images/placeholder.jpg" alt="Encounter Image" class="max-w-full h-auto rounded-lg shadow-md">--}}
                     <img id="encounter-image"
@@ -40,6 +57,10 @@
     @endif
 </div>
 <script>
-    window.encounterId = {{ $encounter->id }};
-    window.initialCurrentTurn = {{ $encounter->current_turn }};
+    @if ($encounter)
+        <script>
+            window.encounterId = {{ $encounter->id }};
+            window.initialCurrentTurn = {{ $encounter->current_turn ?? 0 }};
+        </script>
+    @endif
 </script>
