@@ -46,46 +46,70 @@ class EncounterDashboard extends Component
             : '/images/placeholder.jpg'; // Default placeholder if no image is set
 	}
 
-    public function loadCombatants(): void
-    {
-        $this->encounter->loadMissing('playerCharacters', 'monsterInstances.monster'); // Eager load relationships
+public function loadCombatants(): void
+{
+    // Re-fetch the encounter with all necessary relationships
+    $freshEncounter = Encounter::with([
+        'playerCharacters' => function ($query) {
+            $query->orderBy('encounter_character.order', 'asc'); // Correct pivot table column for ordering
+        },
+        'monsterInstances' => function ($query) {
+            $query->orderBy('order', 'asc');
+        },
+        'monsterInstances.monster' // Eager load monster details for monster instances
+    ])->find($this->encounter->id);
 
-        $playerCharacters = $this->encounter->playerCharacters()->orderBy('pivot_order', 'asc')->get()->map(function ($pc) {
-            return [
-                'id' => $pc->id,
-                'type' => 'player',
-                'name' => $pc->name,
-                'current_hp' => $pc->current_health,
-                'max_hp' => $pc->max_health,
-                'ac' => $pc->ac,
-                'order' => $pc->pivot->order,
-                'original_model' => $pc, // Keep original model for actions if needed
-				'css_classes' => $pc->getListItemCssClasses($this->encounter->current_turn ?? 0),
-            ];
-        });
-
-        $monsterInstances = $this->encounter->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) {
-            // Assuming MonsterInstance will have getListItemCssClasses or similar logic
-            // For now, basic class determination:
-            $isCurrentTurn = (isset($mi->order) && $mi->order == ($this->encounter->current_turn ?? 0));
-            $monsterCssBase = 'monster'; // or 'monster-instance'
-            $monsterCss = $isCurrentTurn ? "{$monsterCssBase}-current-turn" : "{$monsterCssBase}-not-turn";
-
-            return [
-                'id' => $mi->id,
-                'type' => 'monster_instance',
-                'name' => $mi->monster->name, // Access name from related Monster model
-                'current_hp' => $mi->current_health,
-                'max_hp' => $mi->monster->max_health, // Access max_health from related Monster model
-                'ac' => $mi->monster->ac,         // Access ac from related Monster model
-                'order' => $mi->order,
-                'original_model' => $mi,
-				'css_classes' => $monsterCss, // Placeholder for MonsterInstance CSS logic
-            ];
-        });
-
-        $this->combatants = $playerCharacters->merge($monsterInstances)->sortBy('order')->values()->all();
+    if (!$freshEncounter) {
+        $this->combatants = [];
+        // Optionally, reset this->encounter or handle error appropriately
+        // For example, redirect or show a specific error message.
+        // Logging the error is a good first step.
+        Log::warning('Encounter not found when trying to load combatants.', ['encounter_id' => $this->encounter->id]);
+        // If you want to clear the main encounter if it's gone:
+        // $this->encounter = null; // Or some default empty Encounter model
+        return;
     }
+    $this->encounter = $freshEncounter; // Update the component's encounter instance
+
+    // Now use the eager-loaded relationships from $this->encounter
+    $playerCharacters = $this->encounter->playerCharacters->map(function ($pc) {
+        return [
+            'id' => $pc->id,
+            'type' => 'player',
+            'name' => $pc->name,
+            'current_hp' => $pc->current_health,
+            'max_hp' => $pc->max_health,
+            'ac' => $pc->ac,
+            'order' => $pc->pivot->order, // Access pivot data
+            'original_model' => $pc,
+            'css_classes' => $pc->getListItemCssClasses($this->encounter->current_turn ?? 0),
+        ];
+    });
+
+    $monsterInstances = $this->encounter->monsterInstances->map(function ($mi) {
+        $isCurrentTurn = (isset($mi->order) && $mi->order == ($this->encounter->current_turn ?? 0));
+        // Determine monster CSS classes (simplified example, adjust as needed)
+        $monsterCssBase = 'monster';
+        $monsterCss = $isCurrentTurn ? "{$monsterCssBase}-current-turn" : "{$monsterCssBase}-not-turn";
+        if (!$mi->monster) { // Safety check if monster relation failed to load
+            Log::error('Monster data missing for monster instance.', ['monster_instance_id' => $mi->id]);
+            return null; // Skip this monster instance if essential data is missing
+        }
+        return [
+            'id' => $mi->id,
+            'type' => 'monster_instance',
+            'name' => $mi->monster->name,
+            'current_hp' => $mi->current_health,
+            'max_hp' => $mi->monster->max_health,
+            'ac' => $mi->monster->ac,
+            'order' => $mi->order,
+            'original_model' => $mi,
+            'css_classes' => $monsterCss, // Placeholder for actual CSS logic
+        ];
+    })->filter(); // Filter out any nulls from failed monster loads
+
+    $this->combatants = collect($playerCharacters)->merge($monsterInstances)->sortBy('order')->values()->all();
+}
 
     public function updateCombatantHealth(int $combatantId, string $combatantType, string $newHpStr): void
     {
