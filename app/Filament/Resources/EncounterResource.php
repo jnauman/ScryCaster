@@ -3,7 +3,10 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\EncounterResource\Pages;
-use App\Filament\Resources\EncounterResource\RelationManagers;
+// Corrected: No longer using the generic RelationManagers namespace directly for listing them
+// use App\Filament\Resources\EncounterResource\RelationManagers;
+use App\Filament\Resources\EncounterResource\RelationManagers\PlayerCharactersRelationManager;
+use App\Filament\Resources\EncounterResource\RelationManagers\MonsterInstancesRelationManager;
 use App\Models\Encounter;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -119,7 +122,8 @@ class EncounterResource extends Resource
 	public static function getRelations(): array
 	{
 		return [
-			RelationManagers\CharactersRelationManager::class, // Manages characters within this encounter.
+            PlayerCharactersRelationManager::class,
+            MonsterInstancesRelationManager::class,
 		];
 	}
 

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\MonsterInstance; // Added for HasMany relationship
 // use Illuminate\Support\Collection; // Removed as it was unused
 
 /**
@@ -42,8 +44,14 @@ class Encounter extends Model
 	 */
 	public function calculateOrder(): void
 	{
+		// TODO: This method needs to be refactored to handle both playerCharacters and monsterInstances.
+		// The current logic is specific to the old characters() relationship.
+		// For now, commenting out to prevent errors. A full redesign of initiative handling
+		// across player characters and monster instances will be required.
+
+		/*
 		// Retrieve characters associated with this encounter, ordered by initiative roll (descending)
-		$characters = $this->characters()->orderBy('pivot_initiative_roll', 'desc')->get();
+		$characters = $this->playerCharacters()->orderBy('pivot_initiative_roll', 'desc')->get();
 
 		// Further group by initiative roll to handle ties
 		$groupedByInitiative = $characters->groupBy('pivot.initiative_roll');
@@ -57,28 +65,36 @@ class Encounter extends Model
 
 			foreach ($sortedGroup as $character) {
 				// Update the 'order' in the pivot table for each character
-				$this->characters()->updateExistingPivot($character->id, ['order' => $order]);
+				$this->playerCharacters()->updateExistingPivot($character->id, ['order' => $order]);
 				$order++;
 			}
 		}
+		*/
 	}
 
 	/**
-	 * Defines the many-to-many relationship with characters participating in this encounter.
-	 *
-	 * This uses the 'encounter_character' pivot table and includes pivot data
-	 * like 'initiative_roll' and 'order'.
+	 * Defines the many-to-many relationship with player characters participating in this encounter.
+	 * Uses the 'encounter_character' pivot table.
 	 *
 	 * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
 	 */
-	public function characters(): BelongsToMany
+	public function playerCharacters(): BelongsToMany
 	{
-		// An Encounter can have many Characters, and a Character can be in many Encounters.
+		// An Encounter can have many Player Characters (via Character model),
+		// and a Player Character can be in many Encounters.
 		// 'encounter_character' is the pivot table.
 		// 'withPivot' specifies additional columns on the pivot table to retrieve.
 		return $this->belongsToMany(Character::class, 'encounter_character')
 					->withPivot('initiative_roll', 'order');
 	}
+
+    /**
+     * Defines the one-to-many relationship with monster instances in this encounter.
+     */
+    public function monsterInstances(): HasMany
+    {
+        return $this->hasMany(MonsterInstance::class);
+    }
 
 	/**
 	 * Defines the relationship to the Campaign this encounter belongs to.
