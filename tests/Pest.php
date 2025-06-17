@@ -11,9 +11,12 @@
 |
 */
 
-pest()->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
-    ->in('Feature');
+// Sets the default TestCase to be used by all tests in the 'Feature' directory.
+uses(Tests\TestCase::class)->in('Feature');
+
+// You can also globally apply traits like RefreshDatabase if needed for all Feature tests
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class)->in('Feature');
+// Or apply it selectively in your test files.
 
 /*
 |--------------------------------------------------------------------------

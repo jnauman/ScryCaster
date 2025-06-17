@@ -35,6 +35,7 @@ class Character extends Model
 		'max_health',    // Maximum health points
 		'current_health',// Current health points
 		'user_id',       // Foreign key for the User who owns this character (nullable for monsters)
+		'data',          // JSON field for additional character data
 	];
 
 
