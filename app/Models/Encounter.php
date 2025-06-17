@@ -115,6 +115,30 @@ public function calculateOrder(): void
         return $this->hasMany(MonsterInstance::class);
     }
 
+	public function getCombatants()
+	{
+		// Eager load the relationships to prevent N+1 query problems in the view
+		$playerCharacters = $this->playerCharacters()->get();
+		$monsterInstances = $this->monsterInstances()->with('monster')->get();
+
+		// Merge the two collections into one
+		$allCombatants = $playerCharacters->concat($monsterInstances);
+
+		// Sort the combined collection by the 'order'
+		// We need to use a custom sort function because the 'order' attribute
+		// is in different places for players (pivot->order) and monsters (order).
+		$sortedCombatants = $allCombatants->sortBy(function ($combatant) {
+			// Check if the combatant is a Character model
+			if ($combatant instanceof \App\Models\Character) {
+				return $combatant->pivot->order;
+			}
+			// Otherwise, it's a MonsterInstance model
+			return $combatant->order;
+		});
+
+		return $sortedCombatants;
+	}
+
 	/**
 	 * Defines the relationship to the Campaign this encounter belongs to.
 	 *
