@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Encounter;
 use Illuminate\Support\Facades\Storage; // Added for Storage facade
+use Illuminate\Support\Facades\Log; // Add if not already there
 use Livewire\Component;
 
 /**
@@ -38,6 +39,7 @@ class EncounterDashboard extends Component
 	public function mount(Encounter $encounter): void
 	{
 		$this->encounter = $encounter;
+    $this->encounter->refresh(); // Refresh to get the latest data
         $this->loadCombatants(); // Initial load of combatants
         $this->imageUrl = $this->encounter->current_image
             ? Storage::disk('public')->url($this->encounter->current_image)
@@ -124,8 +126,24 @@ class EncounterDashboard extends Component
 			// Listens on a private channel: "private-encounter.{encounterId}"
 			// For an event named: "EncounterImageUpdated" (prefixed with a dot if not using broadcastAs)
 			"echo-private:encounter.{$this->encounter->id},.EncounterImageUpdated" => 'updateImage',
+            "echo:encounter,.TurnChanged" => "handleTurnChanged", // Added listener
 		];
 	}
+
+    public function handleTurnChanged(array $payload): void
+    {
+        if ((int)$payload['encounterId'] === (int)$this->encounter->id) {
+            $this->encounter->current_round = $payload['currentRound'];
+            $this->encounter->current_turn = $payload['currentTurn'];
+            // Optionally, persist these changes if the dashboard itself is meant to be a source of truth
+            // $this->encounter->save();
+            // However, typically the event source (Filament action) would have already persisted this.
+            // Refreshing the model from DB might be safer if other attributes could change.
+            // $this->encounter->refresh(); // Uncomment if other non-payload attributes might change.
+
+            $this->loadCombatants();
+        }
+    }
 
 	/**
 	 * Handles the 'EncounterImageUpdated' event received via Echo.
@@ -138,8 +156,25 @@ class EncounterDashboard extends Component
 	 */
 	public function updateImage(array $payload): void
 	{
-		// Update the public property, Livewire will automatically re-render relevant parts.
-		$this->imageUrl = $payload['imageUrl'];
+    if (isset($payload['imageUrl']) && is_string($payload['imageUrl'])) {
+        // Optional: Check if the event is for the correct encounter,
+        // though private channels usually handle this.
+        if (isset($payload['encounterId']) && (int)$payload['encounterId'] === (int)$this->encounter->id) {
+            $this->imageUrl = $payload['imageUrl'];
+        } elseif (!isset($payload['encounterId'])) {
+            // If encounterId is not in payload, update anyway assuming channel is specific enough
+            $this->imageUrl = $payload['imageUrl'];
+        }
+        // If encounterId is set but doesn't match, do nothing or log.
+        // else {
+        //     Log::warning('Received EncounterImageUpdated event for wrong encounter ID.', [
+        //         'expected_id' => $this->encounter->id,
+        //         'received_id' => $payload['encounterId'] ?? null,
+        //     ]);
+        // }
+    } else {
+        Log::warning('EncounterImageUpdated event received with invalid payload.', ['payload' => $payload]);
+    }
 	}
 
 	/**
