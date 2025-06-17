@@ -8,103 +8,90 @@ use App\Models\User;
 // For Laravel 10+, you might use Illuminate\Auth\Access\Response.
 
 /**
- * Policy for Character model.
+ * Policy for the Character model (Player Characters).
  *
- * Defines authorization rules for actions related to characters, such as viewing,
+ * Defines authorization rules for actions related to player characters, such as viewing,
  * creating, updating, and deleting.
- * The current policy primarily restricts actions to the character's owner (User).
- * GM override logic is noted as a potential future enhancement.
+ * The policy primarily restricts actions to the player character's owner (User/GM).
  */
 class CharacterPolicy
 {
 	/**
-	 * Determine whether the user can view any characters.
+	 * Determine whether the user can view any player characters.
 	 *
-	 * This policy method is typically used for index pages (e.g., a global list of characters).
+	 * This policy method is typically used for index pages.
 	 * Currently allows any authenticated user to access such a list.
-	 * Filtering (e.g., by ownership or campaign) would be handled at the query level.
+	 * Filtering by ownership is handled at the Filament resource query level.
 	 *
 	 * @param  \App\Models\User  $user The currently authenticated user.
-	 * @return bool True if the user can view any characters, false otherwise.
+	 * @return bool True if the user can view any player characters.
 	 */
 	public function viewAny(User $user): bool
 	{
-		// Allows any authenticated user to access a character list view.
-		// Specific resource query scoping (e.g., in CharacterResource) would handle
-		// showing only relevant characters if this policy is too broad for a context.
+		// Allows any authenticated user to access a player character list view.
+		// The CharacterResource query will scope this to the user's own characters.
 		return true;
 	}
 
 	/**
-	 * Determine whether the user can view a specific character.
+	 * Determine whether the user can view a specific player character.
 	 *
-	 * A user can view a character if they are its owner.
-	 * Future enhancements could include allowing GMs of campaigns the character is in to view it.
+	 * A user can view a player character if they are its owner.
 	 *
 	 * @param  \App\Models\User  $user The currently authenticated user.
-	 * @param  \App\Models\Character  $character The character being viewed.
-	 * @return bool True if the user can view the character, false otherwise.
+	 * @param  \App\Models\Character  $character The player character being viewed.
+	 * @return bool True if the user can view the player character.
 	 */
 	public function view(User $user, Character $character): bool
 	{
-		// Only the user who owns the character can view it.
-		// Note: $character->user_id can be null for monster-type characters.
-		// If $character->user_id is null, this will correctly return false (unless $user->id is also null, which is unlikely for an authenticated user).
+		// Only the user who owns the player character can view it.
+		// $character->user_id is non-nullable for player characters.
 		return $user->id === $character->user_id;
-
-		// Potential future enhancement for GM access:
-		// if ($user->id === $character->user_id) {
-		//     return true;
-		// }
-		// return $user->campaignsGm()->whereHas('characters', function ($query) use ($character) {
-		//     $query->where('characters.id', $character->id);
-		// })->exists();
 	}
 
 	/**
-	 * Determine whether the user can create characters.
+	 * Determine whether the user can create player characters.
 	 *
-	 * Any authenticated user can create characters. The character's `user_id`
-	 * should be set to the creating user's ID during the creation process.
+	 * Any authenticated user can create player characters. The character's `user_id`
+	 * will be set to the creating user's ID.
 	 *
 	 * @param  \App\Models\User  $user The currently authenticated user.
-	 * @return bool True if the user can create characters, false otherwise.
+	 * @return bool True if the user can create player characters.
 	 */
 	public function create(User $user): bool
 	{
-		// Any authenticated user can create a character.
-		// It's assumed the character's user_id will be associated with this user upon creation.
+		// Any authenticated user can create a player character.
+		// The CharacterResource will ensure user_id is set to the authenticated user.
 		return true;
 	}
 
 	/**
-	 * Determine whether the user can update the specified character.
+	 * Determine whether the user can update the specified player character.
 	 *
-	 * Only the owner of the character can update it.
+	 * Only the owner of the player character can update it.
 	 *
 	 * @param  \App\Models\User  $user The currently authenticated user.
-	 * @param  \App\Models\Character  $character The character to be updated.
-	 * @return bool True if the user can update the character, false otherwise.
+	 * @param  \App\Models\Character  $character The player character to be updated.
+	 * @return bool True if the user can update the player character.
 	 */
 	public function update(User $user, Character $character): bool
 	{
-		// Only the user who owns the character can update it.
+		// Only the user who owns the player character can update it.
 		return $user->id === $character->user_id;
-		// Add GM logic later if needed (e.g., GM can update characters in their campaign).
 	}
 
 	/**
-	 * Determine whether the user can delete the specified character.
+	 * Determine whether the user can delete the specified player character.
 	 *
-	 * Only the owner of the character can delete it.
+	 * Only the owner of the player character can delete it.
 	 *
 	 * @param  \App\Models\User  $user The currently authenticated user.
-	 * @param  \App\Models\Character  $character The character to be deleted.
-	 * @return bool True if the user can delete the character, false otherwise.
+	 * @param  \App\Models\Character  $character The player character to be deleted.
+	 * @return bool True if the user can delete the player character.
 	 */
 	public function delete(User $user, Character $character): bool
 	{
-		// Only the user who owns the character can delete it.
+		// Only the user who owns the player character can delete it.
 		return $user->id === $character->user_id;
 		// Add GM logic later if needed (e.g., GM can delete characters in their campaign).
 	}

@@ -103,13 +103,8 @@ class CharacterResource extends Resource
 					->required()
 					->maxLength(255)
 					->columnSpanFull(),
-				Forms\Components\Select::make('type')
-					->label('Character Type')
-					->options([ // Predefined options for character type.
-						'player' => 'Player',
-						'monster' => 'Monster',
-					])
-					->required(),
+				// The 'type' field is removed as Characters are now always 'player' type.
+				// Ownership is determined by user_id, set automatically.
 				Forms\Components\TextInput::make('ac')
 					->label('Armor Class')
 					->numeric() // Input should be a number.
@@ -144,10 +139,11 @@ class CharacterResource extends Resource
 		return $table
 			->columns([
 				Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-				Tables\Columns\TextColumn::make('type')->sortable(),
+				// 'type' column removed as it's implicitly 'player'
 				Tables\Columns\TextColumn::make('ac')->label('AC')->sortable(), // Shortened label for Armor Class.
 				Tables\Columns\TextColumn::make('max_health')->label('Max HP')->sortable(),
 				Tables\Columns\TextColumn::make('current_health')->label('Current HP')->sortable(),
+				Tables\Columns\TextColumn::make('user.name')->label('Owner (GM)')->sortable(),
 			])
 			->filters([
 				// Filters can be defined here if needed.

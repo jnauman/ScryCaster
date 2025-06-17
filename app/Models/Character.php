@@ -24,7 +24,7 @@ class Character extends Model
 	 */
 	protected $fillable = [
 		'name',
-		'type',          // Type of character, e.g., 'player' or 'monster'
+		// 'type' is removed as characters are now always players. Monsters are handled by Monster model.
 		'ac',            // Armor Class: defensive capability
 		'strength',      // Physical power
 		'dexterity',     // Agility and reflexes
@@ -93,14 +93,14 @@ class Character extends Model
 	 */
 	public function getListItemCssClasses(int $currentEncounterTurn): string
 	{
-		$baseType = $this->type; // 'player' or 'monster'
+		$baseType = 'player'; // Type is now fixed for Character model
 		// Check if pivot data exists and if the character's order matches the current turn.
 		$isCurrentTurn = ($this->pivot && isset($this->pivot->order) && $this->pivot->order == $currentEncounterTurn);
 
 		if ($isCurrentTurn) {
-			return "{$baseType}-current-turn"; // e.g., "player-current-turn"
+			return "{$baseType}-current-turn";
 		} else {
-			return "{$baseType}-not-turn";   // e.g., "monster-not-turn"
+			return "{$baseType}-not-turn";
 		}
 	}
 }

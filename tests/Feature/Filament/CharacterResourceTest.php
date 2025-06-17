@@ -24,7 +24,7 @@ beforeEach(function () {
 // Test 1: File upload component is present on the create character page
 test('file upload component is present on create character page', function () {
     Livewire::test(CharacterResource\Pages\CreateCharacter::class)
-        ->assertFormFieldExists('data'); // The FileUpload component is named 'data' in CharacterResource.php
+        ->assertFormFieldExists('character_json_upload');
 });
 
 // Test 2: Uploading a valid JSON file populates the character fields
@@ -47,12 +47,12 @@ test('uploading a valid json file populates character fields', function () {
     $fakeFile = UploadedFile::fake()->createWithContent('character.json', $validJsonContent);
 
     $livewireTest = Livewire::test(CharacterResource\Pages\CreateCharacter::class)
-        ->set('data', $fakeFile) // Correctly simulate file upload
-        ->call('validate') // Trigger validation which should also trigger afterStateUpdated
-        ->call('mountAction', 'loadCharacterData'); // A dummy action to potentially force re-render if needed, or just rely on validate.
-                                                 // More directly, one might try $livewireTest->instance()->fillForm(); but that's less clean.
+        ->set('character_json_upload', $fakeFile) // Use the correct component name
+        ->call('validate'); // Trigger validation which should also trigger afterStateUpdated
 
-    $formData = $livewireTest->get('data');
+    // Access the form data after 'afterStateUpdated' has run
+    $formData = $livewireTest->instance()->form->getState();
+
 
     expect($formData['name'])->toBe('Test Character');
     expect($formData['ac'])->toBe(15);
@@ -85,17 +85,15 @@ test('submitting form with uploaded json creates character in database', functio
             'WIS' => 11,
             'CHA' => 10,
         ],
-        'type' => 'player', // Required field for Character model
+        // 'type' removed from JSON
         'unique_field' => 'unique_value_for_db_test' // To ensure we find this specific entry
     ]);
 
     $fakeFile = UploadedFile::fake()->createWithContent('character.json', $validJsonContent);
 
     Livewire::test(CharacterResource\Pages\CreateCharacter::class)
-        ->fillForm([ // Fill other required fields not set by JSON
-            'type' => 'player',
-        ])
-        ->set('data', $fakeFile) // Correctly simulate file upload
+        // ->fillForm([]) // No 'type' field to fill anymore
+        ->set('character_json_upload', $fakeFile) // Use correct component name
         ->call('create')
         ->assertHasNoFormErrors();
 
@@ -109,9 +107,10 @@ test('submitting form with uploaded json creates character in database', functio
         'intelligence' => 9,
         'wisdom' => 11,
         'charisma' => 10,
-        'type' => 'player',
+        'user_id' => $this->user->id, // Assert user_id
+        // 'type' removed
         // The 'data' column in the DB should store the full JSON
-        'data' => $validJsonContent,
+        'data' => $validJsonContent, // This JSON still contains 'unique_field' but not 'type'
     ]);
 });
 
@@ -126,11 +125,10 @@ test('uploading a syntactically invalid json file does not populate fields', fun
     $fakeFile = UploadedFile::fake()->createWithContent('invalid_character.json', $invalidJsonContent);
 
     $livewireTest = Livewire::test(CharacterResource\Pages\CreateCharacter::class)
-        ->set('data', $fakeFile) // Correctly simulate file upload
+        ->set('character_json_upload', $fakeFile) // Use correct component name
         ->call('validate'); // Trigger processing
-        // ->call('mountAction', 'loadCharacterData'); // Potentially force re-render
 
-    $formData = $livewireTest->get('data');
+    $formData = $livewireTest->instance()->form->getState();
 
     expect($formData['name'])->toBeNull();
     expect($formData['ac'])->toBeNull();
@@ -160,9 +158,9 @@ test('uploading a non-json file shows a validation error', function () {
     $fakeFile = UploadedFile::fake()->createWithContent('character.txt', $notJsonContent);
 
     Livewire::test(CharacterResource\Pages\CreateCharacter::class)
-        ->set('data', $fakeFile) // Correctly simulate file upload
+        ->set('character_json_upload', $fakeFile) // Use correct component name
         ->call('validate') // Trigger validation
-        ->assertHasFormErrors(['data']); // Expect error on the 'data' (FileUpload) field itself due to wrong file type
+        ->assertHasFormErrors(['character_json_upload']); // Expect error on the upload component field
 });
 
 // Test 6: Test with a JSON that's valid but missing some expected fields
@@ -180,11 +178,10 @@ test('uploading valid json missing some fields populates available fields', func
     $fakeFile = UploadedFile::fake()->createWithContent('partial_character.json', $partialJsonContent);
 
     $livewireTest = Livewire::test(CharacterResource\Pages\CreateCharacter::class)
-        ->set('data', $fakeFile) // Correctly simulate file upload
+        ->set('character_json_upload', $fakeFile) // Use correct component name
         ->call('validate');
-        // ->call('mountAction', 'loadCharacterData'); // Potentially force re-render
 
-    $formData = $livewireTest->get('data');
+    $formData = $livewireTest->instance()->form->getState();
 
     expect($formData['name'])->toBe('Partial Character');
     expect($formData['ac'])->toBe(12);
@@ -220,17 +217,15 @@ test('can create character with valid json upload', function () {
     $fakeFile = UploadedFile::fake()->createWithContent('character.json', $jsonContent);
 
     Livewire::test(CharacterResource\Pages\CreateCharacter::class)
-        ->fillForm([ // Fill any other required fields not covered by JSON parsing.
-            'type' => 'player', // 'type' is required in the schema
-        ])
-        ->set('data.character_json_upload', $fakeFile) // Set the file for the upload component
+        // ->fillForm([]) // No 'type' to fill anymore
+        ->set('character_json_upload', $fakeFile) // Use correct component name
         // The afterStateUpdated hook should now populate other fields based on the JSON.
         // Then we call the create action.
         ->call('create')
         ->assertHasNoFormErrors();
 
     // Assert the character was created in the database
-    $this->assertDatabaseHas('characters', [
+    assertDatabaseHas('characters', [
         'name' => 'Uploaded Test Character',
         'ac' => 16,
         'max_health' => 60,
@@ -241,7 +236,8 @@ test('can create character with valid json upload', function () {
         'intelligence' => 10,
         'wisdom' => 12,
         'charisma' => 8,
-        'type' => 'player', // Ensure this was also saved
+        'user_id' => $this->user->id, // Assert user_id
+        // 'type' removed
     ]);
 
     // Assert the 'data' JSON column

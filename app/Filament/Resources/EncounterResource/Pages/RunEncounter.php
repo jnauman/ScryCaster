@@ -20,9 +20,21 @@ class RunEncounter extends ViewRecord
 
 	public function nextTurn()
 	{
-		$characterCount = $this->record->characters->count();
+		// Load both player characters and monster instances to get the total count
+		$playerCharacterCount = $this->record->playerCharacters()->count();
+		$monsterInstanceCount = $this->record->monsterInstances()->count();
+		$totalCombatants = $playerCharacterCount + $monsterInstanceCount;
 
-		if ($this->record->current_turn < $characterCount) {
+		if ($totalCombatants === 0) {
+			// No combatants, perhaps reset turn/round or do nothing
+			$this->record->current_turn = 0;
+			$this->record->current_round = $this->record->current_round > 0 ? $this->record->current_round : 1; // Keep round or set to 1
+			$this->record->save();
+			event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
+			return;
+		}
+
+		if ($this->record->current_turn < $totalCombatants) {
 			$this->record->current_turn++;
 		} else {
 			$this->record->current_turn = 1;
