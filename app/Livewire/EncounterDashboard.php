@@ -20,6 +20,9 @@ class EncounterDashboard extends Component
 	/** @var Encounter|null The loaded Encounter model instance. */
 	public ?Encounter $encounter;
 
+    /** @var \Illuminate\Support\Collection<int, \App\Models\Character|\App\Models\MonsterInstance> Participants in the encounter. */
+    public \Illuminate\Support\Collection $participants;
+
 	/** @var string|null The URL of the current image for the encounter. */
 	public ?string $imageUrl;
 
@@ -48,13 +51,43 @@ class EncounterDashboard extends Component
 	 */
 	public function loadEncounter(): void
 	{
-		// Eager load characters, ensuring they are ordered by their 'order' in the pivot table.
-		$this->encounter = Encounter::with(['characters' => function ($query) {
-			$query->orderBy('encounter_character.order', 'asc');
-		}])->find($this->encounterId);
+        $this->encounter = Encounter::find($this->encounterId);
+
+        if (!$this->encounter) {
+            // Handle encounter not found, maybe redirect or show an error
+            $this->participants = collect();
+            $this->imageUrl = '/images/placeholder.jpg';
+            return;
+        }
+
+        $players = $this->encounter->characters()
+            ->orderBy('encounter_character.order', 'asc')
+            ->get()
+            ->map(function ($player) {
+                $player->participant_type = 'player';
+                // Ensure pivot data like 'order' is directly accessible if needed, though sorting is primary
+                $player->order = $player->pivot->order;
+                return $player;
+            });
+
+        $monsterInstances = $this->encounter->monsterInstances()
+            ->with('monster') // Eager load monster for name, dexterity etc.
+            ->orderBy('order', 'asc')
+            ->get()
+            ->map(function ($instance) {
+                $instance->participant_type = 'monster_instance';
+                // 'order' is directly on the model
+                return $instance;
+            });
+
+        // Combine and sort. The orderBy above should handle pre-sorting by type.
+        // If a global order field is correctly populated by calculateOrder(), we can just sort by that.
+        $this->participants = $players->concat($monsterInstances)
+                                     ->sortBy('order')
+                                     ->values(); // Reset keys for clean array access in blade
 
 		// Set initial image URL from storage, or use a default placeholder.
-		$this->imageUrl = $this->encounter?->current_image
+		$this->imageUrl = $this->encounter->current_image
 			? Storage::disk('public')->url($this->encounter->current_image)
 			: '/images/placeholder.jpg'; // Default placeholder if no image is set
 	}

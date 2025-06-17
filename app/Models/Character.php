@@ -24,7 +24,6 @@ class Character extends Model
 	 */
 	protected $fillable = [
 		'name',
-		'type',          // Type of character, e.g., 'player' or 'monster'
 		'ac',            // Armor Class: defensive capability
 		'strength',      // Physical power
 		'dexterity',     // Agility and reflexes
@@ -93,14 +92,14 @@ class Character extends Model
 	 */
 	public function getListItemCssClasses(int $currentEncounterTurn): string
 	{
-		$baseType = $this->type; // 'player' or 'monster'
+		$baseType = 'player'; // Assuming 'player' since type is removed
 		// Check if pivot data exists and if the character's order matches the current turn.
 		$isCurrentTurn = ($this->pivot && isset($this->pivot->order) && $this->pivot->order == $currentEncounterTurn);
 
 		if ($isCurrentTurn) {
 			return "{$baseType}-current-turn"; // e.g., "player-current-turn"
 		} else {
-			return "{$baseType}-not-turn";   // e.g., "monster-not-turn"
+			return "{$baseType}-not-turn";   // e.g., "player-not-turn"
 		}
 	}
 }

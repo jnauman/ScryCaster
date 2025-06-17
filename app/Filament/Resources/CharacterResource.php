@@ -103,13 +103,6 @@ class CharacterResource extends Resource
 					->required()
 					->maxLength(255)
 					->columnSpanFull(),
-				Forms\Components\Select::make('type')
-					->label('Character Type')
-					->options([ // Predefined options for character type.
-						'player' => 'Player',
-						'monster' => 'Monster',
-					])
-					->required(),
 				Forms\Components\TextInput::make('ac')
 					->label('Armor Class')
 					->numeric() // Input should be a number.
@@ -144,7 +137,6 @@ class CharacterResource extends Resource
 		return $table
 			->columns([
 				Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-				Tables\Columns\TextColumn::make('type')->sortable(),
 				Tables\Columns\TextColumn::make('ac')->label('AC')->sortable(), // Shortened label for Armor Class.
 				Tables\Columns\TextColumn::make('max_health')->label('Max HP')->sortable(),
 				Tables\Columns\TextColumn::make('current_health')->label('Current HP')->sortable(),

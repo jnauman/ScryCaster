@@ -48,8 +48,6 @@ class CharacterPolicy
 	public function view(User $user, Character $character): bool
 	{
 		// Only the user who owns the character can view it.
-		// Note: $character->user_id can be null for monster-type characters.
-		// If $character->user_id is null, this will correctly return false (unless $user->id is also null, which is unlikely for an authenticated user).
 		return $user->id === $character->user_id;
 
 		// Potential future enhancement for GM access:

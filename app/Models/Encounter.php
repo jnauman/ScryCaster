@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\MonsterInstance;
 // use Illuminate\Support\Collection; // Removed as it was unused
 
 /**
@@ -42,25 +44,52 @@ class Encounter extends Model
 	 */
 	public function calculateOrder(): void
 	{
-		// Retrieve characters associated with this encounter, ordered by initiative roll (descending)
-		$characters = $this->characters()->orderBy('pivot_initiative_roll', 'desc')->get();
+        $players = $this->characters()
+            ->withPivot('initiative_roll')
+            ->get()
+            ->map(function ($player) {
+                $player->initiative_roll = $player->pivot->initiative_roll;
+                $player->participant_type = 'player';
+                return $player;
+            });
 
-		// Further group by initiative roll to handle ties
-		$groupedByInitiative = $characters->groupBy('pivot.initiative_roll');
+        $monsterInstances = $this->monsterInstances()
+            ->with('monster') // Eager load monster for dexterity access
+            ->get()
+            ->map(function ($instance) {
+                // $instance->initiative_roll is directly on the model
+                $instance->participant_type = 'monster_instance';
+                return $instance;
+            });
 
-		$order = 1;
-		foreach ($groupedByInitiative as $initiativeGroup) {
-			// Sort characters within the same initiative group by dexterity (descending) to break ties
-			$sortedGroup = $initiativeGroup->sortByDesc(function ($character) {
-				return $character->dexterity; // Assumes Character model has a 'dexterity' attribute
-			});
+        $participants = $players->concat($monsterInstances);
 
-			foreach ($sortedGroup as $character) {
-				// Update the 'order' in the pivot table for each character
-				$this->characters()->updateExistingPivot($character->id, ['order' => $order]);
-				$order++;
-			}
-		}
+        // Group by initiative roll
+        $groupedByInitiative = $participants->groupBy('initiative_roll');
+
+        $order = 1;
+        // Sort groups by initiative roll descending
+        $sortedGroups = $groupedByInitiative->sortKeysDesc();
+
+        foreach ($sortedGroups as $initiative => $group) {
+            // Sort participants within the same initiative group by dexterity (descending)
+            $sortedGroup = $group->sortByDesc(function ($participant) {
+                if ($participant->participant_type === 'player') {
+                    return $participant->dexterity;
+                } else { // monster_instance
+                    return $participant->monster->dexterity;
+                }
+            });
+
+            foreach ($sortedGroup as $participant) {
+                if ($participant->participant_type === 'player') {
+                    $this->characters()->updateExistingPivot($participant->id, ['order' => $order]);
+                } else { // monster_instance
+                    $participant->update(['order' => $order]);
+                }
+                $order++;
+            }
+        }
 	}
 
 	/**
@@ -90,4 +119,9 @@ class Encounter extends Model
 		// An Encounter belongs to one Campaign.
 		return $this->belongsTo(Campaign::class);
 	}
+
+    public function monsterInstances(): HasMany
+    {
+        return $this->hasMany(MonsterInstance::class);
+    }
 }

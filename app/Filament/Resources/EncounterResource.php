@@ -66,6 +66,35 @@ class EncounterResource extends Resource
 				// They might be set to defaults (e.g., 0 or 1) upon creation via the model or an observer.
 				// Forms\Components\TextInput::make('current_round')->numeric()->default(0),
 				// Forms\Components\TextInput::make('current_turn')->numeric()->default(0),
+
+                Forms\Components\Repeater::make('monsterInstances')
+                    ->relationship()
+                    ->label('Monster Instances')
+                    ->schema([
+                        Forms\Components\Select::make('monster_id')
+                            ->relationship('monster', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                $monster = \App\Models\Monster::find($state);
+                                if ($monster) {
+                                    $set('current_health', $monster->max_health);
+                                }
+                            }),
+                        Forms\Components\TextInput::make('current_health')
+                            ->numeric()
+                            ->required()
+                            ->label('Current Health'),
+                        Forms\Components\TextInput::make('initiative_roll')
+                            ->numeric()
+                            ->label('Initiative Roll')
+                            ->nullable(),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull()
+                    ->addActionLabel('Add Monster Instance'),
 			]);
 	}
 
@@ -120,6 +149,7 @@ class EncounterResource extends Resource
 	{
 		return [
 			RelationManagers\CharactersRelationManager::class, // Manages characters within this encounter.
+            RelationManagers\MonsterInstancesRelationManager::class,
 		];
 	}
 

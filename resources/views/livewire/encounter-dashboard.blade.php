@@ -9,15 +9,39 @@
             <div class="w-[500px] flex-shrink-0 pr-4 overflow-y-auto">
                 <div id="encounter-{{ $encounter->id }}">
                     <ul class="space-y-2">
-                        @foreach ($encounter->characters->sortBy('pivot.order') as $character)
-                            <li class="p-3 rounded-lg flex items-center justify-between
-                                {{ $character->getListItemCssClasses($encounter->current_turn) }}
-                            " data-order="{{ $character->pivot->order }}">
+                        @foreach ($participants as $participant)
+                            @php
+                                $isCurrentTurn = $participant->order == $encounter->current_turn;
+                                $cssClasses = '';
+                                if ($participant->participant_type === 'player') {
+                                    $cssClasses = $participant->getListItemCssClasses($encounter->current_turn);
+                                } else { // monster_instance
+                                    // Basic styling for monster instances, can be expanded
+                                    $cssClasses = $isCurrentTurn ? 'bg-red-400 text-white' : 'bg-red-100';
+                                }
+                            @endphp
+                            <li class="p-3 rounded-lg flex items-center justify-between {{ $cssClasses }}"
+                                data-order="{{ $participant->order }}">
                                 <div class="flex-grow">
-                                    <span class="font-semibold">{{ $character->name }}</span>
+                                    <span class="font-semibold">
+                                        @if ($participant->participant_type === 'player')
+                                            {{ $participant->name }}
+                                        @else
+                                            {{ $participant->monster->name }} (Instance)
+                                        @endif
+                                    </span>
+                                    <span class="text-xs">
+                                        (HP: {{ $participant->current_health }} /
+                                        @if ($participant->participant_type === 'player')
+                                            {{ $participant->max_health }}
+                                        @else
+                                            {{ $participant->monster->max_health }}
+                                        @endif
+                                        )
+                                    </span>
                                 </div>
                                 <div class="text-sm">
-                                    <span>Init: {{ $character->pivot->initiative_roll }}</span>
+                                    <span>Init: {{ $participant->initiative_roll ?? 'N/A' }}</span>
                                 </div>
                             </li>
                         @endforeach
