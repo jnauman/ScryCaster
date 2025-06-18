@@ -14,7 +14,6 @@ return new class extends Migration
 		Schema::create('characters', function (Blueprint $table) {
 			$table->id();
 			$table->string('name');
-			$table->string('type')->default('player'); // player or monster
 			$table->integer('ac');
 			$table->integer('max_health');
 			$table->integer('current_health');
