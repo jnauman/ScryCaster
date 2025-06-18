@@ -76,7 +76,7 @@
 
             {{-- Call to Action Buttons (Optional, duplicates header) --}}
             {{-- You could add more prominent buttons here if desired --}}
-            {{--
+
 			<div class="flex gap-3 text-sm leading-normal">
 				<a href="{{ route('register') }}" class="inline-block px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-medium">
 					Get Started
@@ -85,7 +85,7 @@
 					Log In
 				</a>
 			</div>
-			--}}
+
 
             {{-- Removed original Laravel ecosystem links --}}
 
