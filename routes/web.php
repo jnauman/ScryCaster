@@ -13,11 +13,11 @@ Route::get('/', function () {
 //    ->name('dashboard');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::redirect('settings', 'settings/profile');
+    //Route::redirect('settings', 'settings/profile');
 
-    Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
-    Volt::route('settings/password', 'settings.password')->name('settings.password');
-    Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
+    //Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
+    //Volt::route('settings/password', 'settings.password')->name('settings.password');
+    //Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 	Route::get('/encounter/{encounter}', EncounterDashboard::class)->name('encounter.dashboard');
 
 });
