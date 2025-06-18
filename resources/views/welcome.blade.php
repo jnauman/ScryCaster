@@ -21,7 +21,7 @@
 <body class="bg-gray-100 dark:bg-zinc-900 text-gray-900 dark:text-gray-100 flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col antialiased">
 {{-- Keep header for Login/Register/Dashboard links --}}
 <header class="w-full lg:max-w-4xl max-w-[335px] text-sm mb-6">
-    @if (Route::has('login'))
+    @if (Route::has('filament.app.auth.login'))
         <nav class="flex items-center justify-end gap-4">
             @auth
                 <a
@@ -32,15 +32,15 @@
                 </a>
             @else
                 <a
-                    href="{{ route('login') }}"
+                    href="{{ route('filament.app.auth.login') }}"
                     class="inline-block px-5 py-1.5 dark:text-gray-300 text-gray-700 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 rounded-sm text-sm leading-normal"
                 >
                     Log in
                 </a>
 
-                @if (Route::has('register'))
+                @if (Route::has('filament.app.auth.register'))
                     <a
-                        href="{{ route('register') }}"
+                        href="{{ route('filament.app.auth.register') }}"
                         class="inline-block px-5 py-1.5 dark:text-gray-300 border-gray-300 hover:border-gray-400 border text-gray-700 dark:border-gray-600 dark:hover:border-gray-500 rounded-sm text-sm leading-normal">
                         Register
                     </a>

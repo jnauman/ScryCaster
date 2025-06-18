@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('app')
             ->path('')
             ->login()
+			->registration()
 			->authGuard('web')
             ->colors([
                 'primary' => Color::Amber,
@@ -48,6 +49,9 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-            ]);
+            ])
+			->authMiddleware([
+				Authenticate::class,
+			]);;
     }
 }
