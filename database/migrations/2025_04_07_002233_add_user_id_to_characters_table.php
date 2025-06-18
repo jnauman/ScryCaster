@@ -14,7 +14,7 @@ return new class extends Migration
 		Schema::table('characters', function (Blueprint $table) {
 			// Making it nullable initially to handle existing characters/monsters easier
 			// Add constraint after the 'type' column if it exists, otherwise adjust
-			$table->foreignId('user_id')->nullable()->after('type')->constrained('users')->nullOnDelete();
+			$table->foreignId('user_id')->nullable(false)->after('type')->constrained('users')->cascadeOnDelete();
 		});
     }
 
