@@ -11,15 +11,15 @@
                 <x-app-logo />
             </a>
 
-            <flux:navbar class="-mb-px max-lg:hidden">
+            {{--<flux:navbar class="-mb-px max-lg:hidden">
                 <flux:navbar.item icon="layout-grid" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
                     {{ __('Dashboard') }}
                 </flux:navbar.item>
-            </flux:navbar>
+            </flux:navbar>--}}
 
             <flux:spacer />
 
-            <flux:navbar class="mr-1.5 space-x-0.5 py-0!">
+            {{--<flux:navbar class="mr-1.5 space-x-0.5 py-0!">
                 <flux:tooltip :content="__('Search')" position="bottom">
                     <flux:navbar.item class="!h-10 [&>div>svg]:size-5" icon="magnifying-glass" href="#" :label="__('Search')" />
                 </flux:tooltip>
@@ -41,7 +41,7 @@
                         label="Documentation"
                     />
                 </flux:tooltip>
-            </flux:navbar>
+            </flux:navbar>--}}
 
             <!-- Desktop User Menu -->
             <flux:dropdown position="top" align="end">
@@ -107,13 +107,13 @@
             <flux:spacer />
 
             <flux:navlist variant="outline">
-                <flux:navlist.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
+               {{-- <flux:navlist.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
                 {{ __('Repository') }}
                 </flux:navlist.item>
 
                 <flux:navlist.item icon="book-open-text" href="https://laravel.com/docs/starter-kits" target="_blank">
                 {{ __('Documentation') }}
-                </flux:navlist.item>
+                </flux:navlist.item>--}}
             </flux:navlist>
         </flux:sidebar>
 
