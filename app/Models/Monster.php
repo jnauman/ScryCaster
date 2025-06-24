@@ -13,16 +13,34 @@ class Monster extends Model
 
     protected $fillable = [
         'name',
-        'ac',
-        'max_health',
+        'slug',
+        'description',
+        'ac', // armor_class from JSON
+        'armor_type',
+        'max_health', // hit_points from JSON
+        'attacks',
+        'movement',
         'strength',
         'dexterity',
         'constitution',
         'intelligence',
         'wisdom',
         'charisma',
-        'data',
+        'alignment',
+        'level',
+        'traits', // Will be stored as JSON
+        'data', // Keeping existing data field for other custom data if any
         'user_id',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'traits' => 'array', // Automatically cast traits to/from JSON
+        'data' => 'array',   // Existing cast
     ];
 
     public function user(): BelongsTo
@@ -32,9 +50,6 @@ class Monster extends Model
 
     public function instances(): HasMany
     {
-        // Note: MonsterInstance model will be created in a future step.
-        // If this causes an error during linting or automated checks,
-        // it's expected for now.
         return $this->hasMany(MonsterInstance::class);
     }
 }
