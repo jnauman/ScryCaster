@@ -2,11 +2,23 @@
 
 namespace App\Filament\Pages;
 
-use Filament\Pages\Page;
 
-class Dashboard extends Page
+use App\Filament\Widgets\RecentEncounters;
+use App\Filament\Widgets\StatsOverview;
+use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Widgets\AccountWidget;
+
+class Dashboard extends BaseDashboard
 {
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+	// By removing the `$view` property, we bypass the environmental bug.
+	// protected static string $view = 'filament.pages.dashboard';
 
-    protected static string $view = 'filament.pages.dashboard';
+	public function getWidgets(): array
+	{
+		return [
+			AccountWidget::class,
+			StatsOverview::class,
+			RecentEncounters::class,
+		];
+	}
 }
