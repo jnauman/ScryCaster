@@ -23,18 +23,22 @@
                                 {{-- Combatant Image --}}
                                 <div class="flex-shrink-0">
                                     {{-- Corrected logo path and same size constraints --}}
-                                    <img src="{{ $combatant['profile_image_url'] ?? '/images/logo_simple.jpeg' }}"
+                                    <img src="{{ $combatant['image'] }}"
                                          alt="{{ $combatant['name'] }}"
                                          class="w-16 h-16 object-cover rounded-full border-2 border-gray-600">
                                 </div>
 
                                 <div class="flex-grow">
-                                    <span class="font-bold text-2xl text-white block">{{ $combatant['name'] }}</span>
+                                    <span class="font-bold text-2xl text-white block">{{ $combatant['name'] }}
+                                        @if(!empty($combatant['title']))
+                                            - {{ $combatant['title'] }}
+                                        @endif
+                                    </span>
                                     <span class="text-sm text-gray-400">({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})</span>
 
                                     @if ($combatant['type'] === 'player')
                                         <div class="text-md mt-1 text-gray-300">
-                                            Race: <span class="font-semibold">{{ $combatant['race'] ?? 'N/A' }}</span><br>
+                                            Ancestry: <span class="font-semibold">{{ $combatant['ancestry'] ?? 'N/A' }}</span><br>
                                             Class: <span class="font-semibold">{{ $combatant['class'] ?? 'N/A' }}</span>
                                         </div>
                                     @endif

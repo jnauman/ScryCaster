@@ -46,7 +46,11 @@ class EncounterDashboard extends Component
 				'name' => $pc->name,
 				'ac' => $pc->ac,
 				'order' => $pc->pivot->order,
+				'class' => $pc->class,
+				'ancestry' => $pc->ancestry,
+				'title' => $pc->title,
 				'original_model' => $pc,
+				'image' => $pc->image ? Storage::disk('public')->url($pc->image) : '/images/logo_simple.jpeg',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'player-current-turn' : 'player-not-turn',
 			];
@@ -59,9 +63,10 @@ class EncounterDashboard extends Component
 				'id' => $mi->id,
 				'type' => 'monster_instance',
 				'name' => $mi->monster->name,
-				'ac' => $mi->monster->ac,
+				//'ac' => $mi->monster->ac,
 				'order' => $mi->order,
 				'original_model' => $mi,
+				'image' => $mi->image ? Storage::disk('public')->url($mi->image) : '/images/logo_simple.jpeg',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'monster-current-turn' : 'monster-not-turn',
 			];
