@@ -49,7 +49,7 @@ class CharacterResource extends Resource
 						if (! $state instanceof UploadedFile) {
 							// Not an uploaded file instance (e.g., initial null state, or file removed by user)
 							// Clear all related form fields by setting them to their original schema defaults or null
-							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+							$fieldsToReset = ['name', 'ac', 'max_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 							foreach ($fieldsToReset as $field) {
 								$set($field, $get($field)); // $get($field) will provide the schema default if one is defined, otherwise null for non-FileUpload fields
 							}
@@ -75,7 +75,7 @@ class CharacterResource extends Resource
 						if ($parsedData === null) {
 							// JSON parsing failed (invalid JSON)
 							// Clear all related form fields by setting them to their original schema defaults or null
-							$fieldsToReset = ['name', 'ac', 'max_health', 'current_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+							$fieldsToReset = ['name', 'ac', 'max_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
 							foreach ($fieldsToReset as $field) {
 								$set($field, $get($field)); // Reset to schema default or null
 							}
@@ -89,7 +89,6 @@ class CharacterResource extends Resource
 						$set('name', $parsedData['name']);
 						$set('ac', $parsedData['ac']);
 						$set('max_health', $parsedData['max_health'] ?? $get('max_health'));
-						$set('current_health', $parsedData['current_health'] ?? $get('current_health'));
 						$set('strength', $parsedData['strength'] ?? $get('strength'));
 						$set('dexterity', $parsedData['dexterity'] ?? $get('dexterity'));
 						$set('constitution', $parsedData['constitution'] ?? $get('constitution'));
@@ -120,11 +119,22 @@ class CharacterResource extends Resource
 					->numeric()
 					->required()
 					->default(10),
-				Forms\Components\TextInput::make('current_health')
-					->label('Current Health')
-					->numeric()
-					->required()
-					->default(10),
+				// current_health field removed
+				Forms\Components\TextInput::make('class')
+					->label('Class')
+					->maxLength(255),
+				Forms\Components\TextInput::make('ancestry')
+					->label('Ancestry')
+					->maxLength(255),
+				Forms\Components\TextInput::make('title')
+					->label('Title')
+					->maxLength(255),
+				Forms\Components\FileUpload::make('image')
+					->label('Character Image')
+					->disk('public')
+					->directory('character-images')
+					->image()
+					->maxSize(1024),
 			])->columns(2); // Arrange form fields in 2 columns.
 	}
 
@@ -142,7 +152,6 @@ class CharacterResource extends Resource
 				// 'type' column removed as it's implicitly 'player'
 				Tables\Columns\TextColumn::make('ac')->label('AC')->sortable(), // Shortened label for Armor Class.
 				Tables\Columns\TextColumn::make('max_health')->label('Max HP')->sortable(),
-				Tables\Columns\TextColumn::make('current_health')->label('Current HP')->sortable(),
 				Tables\Columns\TextColumn::make('user.name')->label('Owner (GM)')->sortable(),
 			])
 			->filters([
@@ -205,11 +214,8 @@ class CharacterResource extends Resource
 
 		if (isset($decodedJson['maxHitPoints'])) {
 			$outputData['max_health'] = $decodedJson['maxHitPoints'];
-			// Default current_health to max_health if maxHitPoints is present
-			$outputData['current_health'] = $decodedJson['maxHitPoints'];
 		} else {
 			$outputData['max_health'] = null; // Or a schema default if accessible
-			$outputData['current_health'] = null; // Or a schema default
 		}
 
 		if (isset($decodedJson['stats'])) {
