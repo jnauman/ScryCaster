@@ -22,9 +22,15 @@ class EncounterDashboard extends Component
 	{
 		$this->encounter = $encounter;
 		$this->loadCombatants();
-		$this->imageUrl = $this->encounter->current_image
-			? Storage::disk('public')->url($this->encounter->current_image)
-			: '/images/placeholder.jpg';
+
+        // Eager load the selectedCampaignImage relationship if not already loaded
+        $this->encounter->loadMissing('selectedCampaignImage');
+
+		if ($this->encounter->selectedCampaignImage && $this->encounter->selectedCampaignImage->image_path) {
+			$this->imageUrl = $this->encounter->selectedCampaignImage->image_url; // Use the accessor
+		} else {
+			$this->imageUrl = '/images/placeholder.jpg';
+		}
 	}
 
 	/**

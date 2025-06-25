@@ -85,4 +85,15 @@ class Campaign extends Model
 		// Uses the 'campaign_character' pivot table to manage this relationship.
 		return $this->belongsToMany(Character::class, 'campaign_character');
 	}
+
+	/**
+	 * Defines the relationship to the images that belong to this campaign.
+	 *
+	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
+	 */
+	public function campaignImages(): HasMany
+	{
+		// A Campaign can have many CampaignImages.
+		return $this->hasMany(CampaignImage::class);
+	}
 }

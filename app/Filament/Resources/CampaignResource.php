@@ -145,6 +145,7 @@ class CampaignResource extends Resource
 		return [
 			RelationManagers\CharactersRelationManager::class, // Manages Characters related to the Campaign.
 			RelationManagers\EncountersRelationManager::class, // Manages Encounters related to the Campaign.
+			RelationManagers\CampaignImagesRelationManager::class, // Manages Images related to the Campaign.
 		];
     }
 

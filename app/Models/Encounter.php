@@ -30,7 +30,8 @@ class Encounter extends Model
 		'current_round',  // The current round number in the encounter
 		'current_turn',   // The order number of the character whose turn it currently is
 		'campaign_id',    // Foreign key linking to the Campaign this encounter belongs to
-		'current_image',  // Path to the current image displayed for the encounter
+		// 'current_image', // Path to the current image displayed for the encounter - REMOVED
+		'selected_campaign_image_id', // Foreign key to the selected campaign image
 	];
 
 	/**
@@ -148,5 +149,15 @@ public function calculateOrder(): void
 	{
 		// An Encounter belongs to one Campaign.
 		return $this->belongsTo(Campaign::class);
+	}
+
+	/**
+	 * Defines the relationship to the selected CampaignImage for this encounter.
+	 *
+	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+	 */
+	public function selectedCampaignImage(): BelongsTo
+	{
+		return $this->belongsTo(CampaignImage::class, 'selected_campaign_image_id');
 	}
 }
