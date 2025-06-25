@@ -50,31 +50,40 @@ Broadcast::channel('App.Models.User.{id}', function (User $user, int $id) {
  *                    Returning an array of user data can be useful for presence channels.
  */
 Broadcast::channel('encounter.{encounterId}', function (User $user, int $encounterId) {
-    // Log::info("Attempting to authorize user {$user->id} for encounter {$encounterId}");
+    Log::debug("Broadcasting Auth: Attempting for user {$user->id} on encounter {$encounterId}.");
 
     // Eager load necessary relationships for efficiency.
-    $encounter = Encounter::with('campaign', 'characters')->find($encounterId);
+    // Corrected to use 'playerCharacters' based on model analysis.
+    $encounter = Encounter::with(['campaign', 'playerCharacters'])->find($encounterId);
 
     if (!$encounter) {
-        // Log::warning("Encounter {$encounterId} not found for authorization.");
-        return false; // Encounter does not exist, deny authorization.
+        Log::warning("Broadcasting Auth: Encounter {$encounterId} not found for user {$user->id}.");
+        return false;
     }
+    Log::debug("Broadcasting Auth: Encounter {$encounterId} found: " . $encounter->name);
 
     // Rule 1: User is the Game Master of the campaign this encounter belongs to.
-    if ($encounter->campaign && $user->id === $encounter->campaign->gm_user_id) {
-        // Log::info("User {$user->id} authorized as GM for encounter {$encounterId}");
-        // For private channels, returning true is sufficient for authorization.
-        // Returning an array of user data is primarily for presence channels to share who is listening.
-        return ['id' => $user->id, 'name' => $user->name]; // Or simply return true;
+    if ($encounter->campaign) {
+        Log::debug("Broadcasting Auth: Campaign found: " . $encounter->campaign->name . ". GM User ID: " . ($encounter->campaign->gm_user_id ?? 'Not set'));
+        if (isset($encounter->campaign->gm_user_id) && $user->id === $encounter->campaign->gm_user_id) {
+            Log::info("Broadcasting Auth: User {$user->id} AUTHORIZED as GM for encounter {$encounterId}.");
+            return ['id' => $user->id, 'name' => $user->name];
+        }
+    } else {
+        Log::debug("Broadcasting Auth: No campaign associated with encounter {$encounterId}.");
     }
 
     // Rule 2: User has a character participating in this encounter.
-    // This assumes the Character model has a 'user_id' field linking it to a User.
-    if ($encounter->characters()->where('user_id', $user->id)->exists()) {
-        // Log::info("User {$user->id} authorized as player for encounter {$encounterId}");
-        return ['id' => $user->id, 'name' => $user->name]; // Or simply return true;
+    // Using the eager-loaded 'playerCharacters' relationship.
+    Log::debug("Broadcasting Auth: Checking player characters for user {$user->id} in encounter {$encounterId}. Total player characters: " . $encounter->playerCharacters->count());
+    foreach ($encounter->playerCharacters as $character) {
+        Log::debug("Broadcasting Auth: Checking character ID {$character->id} (User ID: {$character->user_id}) against logged in user {$user->id}.");
+        if (isset($character->user_id) && $character->user_id === $user->id) {
+            Log::info("Broadcasting Auth: User {$user->id} AUTHORIZED as player with character ID {$character->id} for encounter {$encounterId}.");
+            return ['id' => $user->id, 'name' => $user->name];
+        }
     }
     
-    // Log::warning("User {$user->id} failed authorization for encounter {$encounterId}");
-    return false; // User is not authorized if none of the above conditions are met.
+    Log::warning("Broadcasting Auth: User {$user->id} DENIED for encounter {$encounterId}. Did not match GM or participating player character.");
+    return false;
 });
