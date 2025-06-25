@@ -47,13 +47,12 @@ class EncounterImageUpdated implements ShouldBroadcast
 	 *
 	 * @return array<int, \Illuminate\Broadcasting\Channel>
 	 */
-	public function broadcastOn(): array
+	public function broadcastOn()
 	{
-		// Uses a private channel, e.g., "private-encounter.{encounterId}"
-		// Authorization for this channel is handled in routes/channels.php.
 		return [
-			new PrivateChannel('encounter.' . $this->encounterId),
+			new Channel('encounter.' . $this->encounterId),
 		];
+
 	}
 
 	/**
@@ -81,8 +80,8 @@ class EncounterImageUpdated implements ShouldBroadcast
 	public function broadcastWith(): array
 	{
 		return [
-			'encounterId' => $this->encounterId, // Include encounterId in payload for client-side context if needed
-			'imageUrl' => $this->imageUrl,     // The new image URL
+			'encounterId' => $this->encounterId,
+			'imageUrl' => $this->imageUrl,
 		];
 	}
 }

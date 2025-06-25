@@ -2,11 +2,11 @@
     <div id="app">
     </div>
     @if ($encounter)
+
         <h1 class="text-3xl font-extrabold mb-4 text-center text-blue-400">Encounter: {{ $encounter->name }}</h1>
         <p class="text-xl mb-6 text-center text-gray-300">Round: {{ $encounter->current_round }}</p>
 
         <div class="flex flex-col lg:flex-row w-full items-start lg:h-[calc(100vh-200px)] gap-6">
-
             {{-- Combatants List --}}
             <div class="w-full lg:w-1/3 flex-shrink-0 lg:pr-4 overflow-y-auto h-96 lg:h-full bg-gray-800 p-4 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-bold mb-4 text-white">Turn Order</h2>
@@ -61,9 +61,3 @@
         <p class="text-red-500 text-center text-xl mt-8">Encounter not found. Please check the URL.</p>
     @endif
 </div>
-<script>
-    @if ($encounter)
-        window.encounterId = {{ $encounter->id }};
-    window.initialCurrentTurn = {{ $encounter->current_turn ?? 0 }};
-    @endif
-</script>

@@ -4,12 +4,9 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 class TurnChanged implements ShouldBroadcast
 {
@@ -24,17 +21,30 @@ class TurnChanged implements ShouldBroadcast
 	 */
 	public function __construct($encounterId, $currentTurn, $currentRound)
 	{
-		$this->encounterId = $encounterId;
-		$this->currentTurn = $currentTurn;
+
+		$this->encounterId  = $encounterId;
+		$this->currentTurn  = $currentTurn;
 		$this->currentRound = $currentRound;
 	}
+
 	public function broadcastOn()
 	{
-		return ['encounter'];
+		return [
+			new Channel('encounter.' . $this->encounterId),
+		];
 	}
 
 	public function broadcastAs()
 	{
 		return 'TurnChanged';
+	}
+
+	public function broadcastWith(): array
+	{
+		return [
+			'encounterId' => $this->encounterId,
+			'currentTurn' => $this->currentTurn,
+			'currentRound' => $this->currentRound,
+		];
 	}
 }

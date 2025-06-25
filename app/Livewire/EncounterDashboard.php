@@ -3,163 +3,119 @@
 namespace App\Livewire;
 
 use App\Models\Encounter;
-use Illuminate\Support\Facades\Storage; // Added for Storage facade
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
-
-/**
- * Livewire component for displaying an interactive encounter dashboard.
- *
- * This component shows encounter details, character order, and the current encounter image.
- * It listens for real-time updates to the encounter image via Laravel Echo.
- */
-use App\Models\Character; // Added for type hinting
-use App\Models\MonsterInstance; // Added for type hinting
+use App\Models\Character;
+use App\Models\MonsterInstance;
 
 class EncounterDashboard extends Component
 {
-	/** @var Encounter The loaded Encounter model instance. */
 	public Encounter $encounter;
-
-    /** @var array Holds the merged and sorted list of player characters and monster instances. */
-    public array $combatants = [];
-
-	/** @var string|null The URL of the current image for the encounter. */
+	public array $combatants = [];
 	public ?string $imageUrl;
-
-	/** @var bool Controls the visibility of the sidebar. */
 	public bool $sidebarCollapsed = false;
 
 	/**
 	 * Mounts the component and loads the initial encounter data.
-	 *
-	 * @param Encounter $encounter The Encounter model instance to display.
-	 * @return void
 	 */
 	public function mount(Encounter $encounter): void
 	{
 		$this->encounter = $encounter;
-        $this->loadCombatants(); // Initial load of combatants
-        $this->imageUrl = $this->encounter->current_image
-            ? Storage::disk('public')->url($this->encounter->current_image)
-            : '/images/placeholder.jpg'; // Default placeholder if no image is set
+		$this->loadCombatants();
+		$this->imageUrl = $this->encounter->current_image
+			? Storage::disk('public')->url($this->encounter->current_image)
+			: '/images/placeholder.jpg';
 	}
 
-    public function loadCombatants(): void
-    {
-        $this->encounter->loadMissing('playerCharacters', 'monsterInstances.monster'); // Eager load relationships
+	/**
+	 * This method rebuilds the combatants array and calculates their CSS classes.
+	 * This is the core logic for highlighting the current turn.
+	 */
+	public function loadCombatants(): void
+	{
+		$this->encounter->loadMissing('playerCharacters', 'monsterInstances.monster');
 
-        $playerCharacters = $this->encounter->playerCharacters()->orderBy('pivot_order', 'asc')->get()->map(function ($pc) {
-            return [
-                'id' => $pc->id,
-                'type' => 'player',
-                'name' => $pc->name,
-                'current_hp' => $pc->current_health,
-                'max_hp' => $pc->max_health,
-                'ac' => $pc->ac,
-                'order' => $pc->pivot->order,
-                'original_model' => $pc, // Keep original model for actions if needed
-				'css_classes' => $pc->getListItemCssClasses($this->encounter->current_turn ?? 0),
-            ];
-        });
+		$currentTurn = $this->encounter->current_turn ?? 0;
 
-        $monsterInstances = $this->encounter->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) {
-            // Assuming MonsterInstance will have getListItemCssClasses or similar logic
-            // For now, basic class determination:
-            $isCurrentTurn = (isset($mi->order) && $mi->order == ($this->encounter->current_turn ?? 0));
-            $monsterCssBase = 'monster'; // or 'monster-instance'
-            $monsterCss = $isCurrentTurn ? "{$monsterCssBase}-current-turn" : "{$monsterCssBase}-not-turn";
+		$playerCharacters = $this->encounter->playerCharacters()->orderBy('pivot_order', 'asc')->get()->map(function ($pc) use ($currentTurn) {
+			$isCurrentTurn = $pc->pivot->order == $currentTurn;
 
-            return [
-                'id' => $mi->id,
-                'type' => 'monster_instance',
-                'name' => $mi->monster->name, // Access name from related Monster model
-                'current_hp' => $mi->current_health,
-                'max_hp' => $mi->monster->max_health, // Access max_health from related Monster model
-                'ac' => $mi->monster->ac,         // Access ac from related Monster model
-                'order' => $mi->order,
-                'original_model' => $mi,
-				'css_classes' => $monsterCss, // Placeholder for MonsterInstance CSS logic
-            ];
-        });
+			return [
+				'id' => $pc->id,
+				'type' => 'player',
+				'name' => $pc->name,
+				'ac' => $pc->ac,
+				'order' => $pc->pivot->order,
+				'original_model' => $pc,
+				// Explicitly define the CSS classes here
+				'css_classes' => $isCurrentTurn ? 'player-current-turn' : 'player-not-turn',
+			];
+		});
 
-        $this->combatants = $playerCharacters->merge($monsterInstances)->sortBy('order')->values()->all();
-    }
+		$monsterInstances = $this->encounter->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) use ($currentTurn) {
+			$isCurrentTurn = $mi->order == $currentTurn;
 
-    public function updateCombatantHealth(int $combatantId, string $combatantType, string $newHpStr): void
-    {
-        $newHp = filter_var($newHpStr, FILTER_VALIDATE_INT);
-        if ($newHp === false || $newHp < 0) $newHp = 0; // Default to 0 if invalid or negative
+			return [
+				'id' => $mi->id,
+				'type' => 'monster_instance',
+				'name' => $mi->monster->name,
+				'ac' => $mi->monster->ac,
+				'order' => $mi->order,
+				'original_model' => $mi,
+				// Explicitly define the CSS classes here
+				'css_classes' => $isCurrentTurn ? 'monster-current-turn' : 'monster-not-turn',
+			];
+		});
 
-        if ($combatantType === 'player') {
-            $character = Character::find($combatantId);
-            if ($character) {
-                $character->current_health = $newHp;
-                $character->save();
-            }
-        } elseif ($combatantType === 'monster_instance') {
-            $monsterInstance = MonsterInstance::find($combatantId);
-            if ($monsterInstance) {
-                $monsterInstance->current_health = $newHp;
-                $monsterInstance->save();
-            }
-        }
-        $this->loadCombatants(); // Refresh the combatants list
-    }
+		$this->combatants = $playerCharacters->merge($monsterInstances)->sortBy('order')->values()->all();
+	}
 
 	/**
-	 * Defines the event listeners for this component.
-	 *
-	 * Includes a listener for Livewire's 'refresh' event and a Laravel Echo listener
-	 * for real-time updates to the encounter image.
-	 * The Echo listener is for the '.EncounterImageUpdated' event on a private channel
-	 * specific to this encounter instance.
-	 *
-	 * @return array<string, string>
+	 * Defines the event listeners for the component.
 	 */
 	public function getListeners(): array
 	{
 		return [
-			'refresh' => 'loadCombatants', // Changed from loadEncounter
-			// Echo listener for real-time image updates.
-			// Listens on a private channel: "private-encounter.{encounterId}"
-			// For an event named: "EncounterImageUpdated" (prefixed with a dot if not using broadcastAs)
-			"echo-private:encounter.{$this->encounter->id},.EncounterImageUpdated" => 'updateImage',
+			"echo:encounter.{$this->encounter->id},.EncounterImageUpdated" => 'updateImage',
+			"echo:encounter.{$this->encounter->id},.TurnChanged" => 'handleTurnChange',
 		];
 	}
 
 	/**
-	 * Handles the 'EncounterImageUpdated' event received via Echo.
-	 *
-	 * Updates the `imageUrl` property with the new image URL from the event payload.
-	 *
-	 * @param array $payload The event data. Expected to contain 'imageUrl'.
-	 *                       Example: `['encounterId' => 123, 'imageUrl' => '/storage/images/new_image.png']`
-	 * @return void
+	 * Handles the 'EncounterImageUpdated' event.
 	 */
 	public function updateImage(array $payload): void
 	{
-		// Update the public property, Livewire will automatically re-render relevant parts.
-		$this->imageUrl = $payload['imageUrl'];
+		if ($this->encounter->id === $payload['encounterId']) {
+			$this->imageUrl = $payload['imageUrl'];
+		}
 	}
 
 	/**
-	 * Toggles the collapsed state of the sidebar.
-	 *
-	 * @return void
+	 * Handles the 'TurnChanged' event, updating the state and reloading the combatants.
 	 */
+	public function handleTurnChange(array $payload): void
+	{
+		if ($this->encounter->id === $payload['encounterId']) {
+			// 1. Update the component's state from the event payload.
+			$this->encounter->current_turn = $payload['currentTurn'];
+			$this->encounter->current_round = $payload['currentRound'];
+
+			// 2. Reload the combatants list, which will recalculate the CSS classes.
+			$this->loadCombatants();
+		}
+	}
+
 	public function toggleSidebar(): void
 	{
 		$this->sidebarCollapsed = !$this->sidebarCollapsed;
 	}
 
 	/**
-	 * Renders the component.
-	 *
-	 * @return \Illuminate\Contracts\View\View
+	 * Renders the component view. Livewire automatically handles re-rendering when properties change.
 	 */
 	public function render()
 	{
-		// Returns the Blade view associated with this Livewire component.
 		return view('livewire.encounter-dashboard');
 	}
 }
