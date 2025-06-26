@@ -72,16 +72,23 @@
 								</div>
 
 								@if ($combatant['type'] === 'monster_instance')
+
 									<div class="flex items-center space-x-2 mt-2 sm:mt-0">
 										<label for="hp-{{ $combatant['id'] }}" class="text-sm text-gray-300">HP:</label>
+
 										<input type="number"
 											   id="hp-{{ $combatant['id'] }}"
-                                               wire:model.lazy="combatantsForView.{{ $index }}.current_health"
+											   wire:key="hp-input-{{ $combatant['id'] }}"
+											   value="{{ $combatant['current_health'] }}"
 											   wire:change="updateMonsterHp({{ $combatant['id'] }}, $event.target.value)"
-											   class="w-20 bg-gray-700 text-white border border-gray-600 rounded-md p-1 text-sm focus:ring-primary-500 focus:border-primary-500"
+											   style="color:#1b1b18"
+											   class="w-24 rounded-lg border-2 border-gray-600 bg-gray-800 p-1
+												text-center text-xl font-bold text-white
+												transition-colors duration-200 ease-in-out
+												focus:border-yellow-400 focus:outline-none focus:ring-0"
 											   min="0"
 											   max="{{ $combatant['max_health'] }}">
-										<span class="text-sm text-gray-400">/ {{ $combatant['max_health'] }}</span>
+										<span class="text-sm text-gray-400"> / {{ $combatant['max_health'] }}</span>
 									</div>
 								@endif
 							</li>

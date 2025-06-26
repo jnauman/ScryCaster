@@ -25,7 +25,7 @@ class RunEncounter extends ViewRecord
     public array $initiativeInputs = [];
     public array $combatantsForView = []; // For storing combined and sorted combatants
 
-	protected function-disabled mount($record): void
+	function mount($record): void
     {
         parent::mount($record); // TODO: Filament\Resources\Pages\ViewRecord does not have a mount method. Check if this should be `fillForm()` or similar.
         $this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
@@ -147,7 +147,9 @@ class RunEncounter extends ViewRecord
         });
 
         $monsterInstances = $this->record->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) {
-            return [
+			$mi->current_health = $mi->current_health ?? $mi->monster->max_health;
+
+			return [
                 'id' => $mi->id,
                 'type' => 'monster_instance',
                 'name' => $mi->monster->name,
