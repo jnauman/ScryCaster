@@ -9,12 +9,17 @@ use Filament\Resources\Pages\ViewRecord;
 use App\Events\TurnChanged;
 use Illuminate\Support\Facades\Log;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Actions\Action;
-use App\Events\EncounterImageUpdated; // Create this event later
+use App\Events\EncounterImageUpdated;
+use App\Models\CampaignImage;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 use App\Models\MonsterInstance; // Added for type hinting
 use App\Models\Character; // Added for type hinting
 use Filament\Notifications\Notification; // Added for notifications
+
 
 class RunEncounter extends ViewRecord
 {
@@ -193,49 +198,107 @@ class RunEncounter extends ViewRecord
 		}
 
 		$this->record->save();
-		// In your Laravel code where you broadcast the event
 		event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
-		//broadcast(new TurnChanged($this->record->id, $this->record->current_turn));
-
-		//$this->mount($this->record->id);
-
 	}
 
 	protected function getHeaderActions(): array
 	{
 		return [
-			Action::make('uploadImage')
-				  ->label('Upload Image')
+			Action::make('selectCampaignImage')
+				  ->label('Select Image')
 				  ->form([
-							 FileUpload::make('current_image_upload')
-									   ->label('Encounter Image')
-									   ->image() // Specify it's an image
-								 		->rules(['image'])
-									   ->disk('public') // Use the public disk
-									   ->directory('encounter-images') // Optional: store in a subdirectory
-									   ->required()
-									   ->helperText('Upload a new image to display to players.')
-									   //->reactive() // Make it reactive if needed, though maybe not necessary in a simple action
+							 Select::make('selected_campaign_image_id')
+								   ->label('Choose an Image')
+								 // This part is working correctly, no changes needed.
+								   ->getOptionLabelUsing(function ($value) {
+									 $image = CampaignImage::find($value);
+									 return $image ? ($image->caption ? "{$image->original_filename} ({$image->caption})" : $image->original_filename) : null;
+								 })
+
+								 // --- START OF CHANGES ---
+								   ->getSearchResultsUsing(function (string $search) {
+									 if (!$this->record->campaign_id) {
+										 return [];
+									 }
+									 return CampaignImage::where('campaign_id', $this->record->campaign_id)
+														 ->where(function ($query) use ($search) {
+															 $query->where('original_filename', 'like', "%{$search}%")
+																   ->orWhere('caption', 'like', "%{$search}%");
+														 })
+														 ->limit(50)
+														 ->get()
+														 ->mapWithKeys(function (CampaignImage $image) {
+															 $caption = $image->caption ? " ({$image->caption})" : '';
+															 $imageUrl = $image->image_url;
+															 return [$image->id =>
+																		 '<div style="display: flex; align-items: center; gap: 10px;">' .
+																		 '<img src="' . e($imageUrl) . '" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />' .
+																		 '<div>' . e($image->original_filename . $caption) . '</div>' .
+																		 '</div>'
+															 ];
+														 });
+								 })
+
+								 // --- END OF CHANGES ---
+
+								   ->allowHtml() // Still required for the search results
+								   ->searchable() // Keep this, it now feeds the $search term to getSearchResultsUsing
+								   ->required()
+								   ->default($this->record->selected_campaign_image_id),
 						 ])
 				  ->action(function (array $data) {
-					  // $data['current_image_upload'] will contain the temporary path
-					  // Filament handles the final move. We just need to save the path.
+					  $this->record->update(['selected_campaign_image_id' => $data['selected_campaign_image_id']]);
+					  $selectedImage = CampaignImage::find($data['selected_campaign_image_id']);
+					  if ($selectedImage) {
+						  event(new EncounterImageUpdated($this->record->id, $selectedImage->image_url));
+						  \Filament\Notifications\Notification::make()
+															  ->title('Image selected successfully')
+															  ->success()
+															  ->send();
+					  }
+				  })
+				  ->icon('heroicon-o-photo'),
 
-					  // Get the final path after Filament stores it
-					  $path = $data['current_image_upload'];
+            Action::make('uploadAndSelectCampaignImage')
+                ->label('Upload New Image')
+                ->form([
+                    FileUpload::make('new_campaign_image')
+                        ->label('Upload Image')
+                        ->image()
+                        ->disk('public')
+                        ->directory('campaign-images/' . $this->record->campaign_id)
+                        ->preserveFilenames()
+                        ->required(),
+                    Textarea::make('caption')
+                        ->label('Caption (Optional)')
+                        ->columnSpanFull(),
+                ])
+                ->action(function (array $data) {
+                    if (!$this->record->campaign_id) {
+                        \Filament\Notifications\Notification::make()
+                            ->title('Error: Encounter not linked to a campaign.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
 
-					  $this->record->update(['current_image' => $path]);
-					  $this->refreshFormData(['current_image_upload']); // Clear the form input potentially
+                    $newImage = CampaignImage::create([
+                        'campaign_id' => $this->record->campaign_id,
+                        'uploader_user_id' => auth()->id(),
+                        'image_path' => $data['new_campaign_image'],
+                        'original_filename' => basename($data['new_campaign_image']), // Or use TemporaryUploadedFile methods if available
+                        'caption' => $data['caption'],
+                    ]);
 
-					  // Broadcast the update
-					  event(new EncounterImageUpdated($this->record->id, Storage::disk('public')->url($path)));
+                    $this->record->update(['selected_campaign_image_id' => $newImage->id]);
+                    event(new EncounterImageUpdated($this->record->id, $newImage->image_url));
 
-					  \Filament\Notifications\Notification::make()
-														  ->title('Image uploaded successfully')
-														  ->success()
-														  ->send();
-
-				  }),
+                    \Filament\Notifications\Notification::make()
+                        ->title('Image uploaded and selected successfully')
+                        ->success()
+                        ->send();
+                })
+                ->icon('heroicon-o-arrow-up-tray'),
 		];
 	}
 }
