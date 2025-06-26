@@ -32,6 +32,8 @@ class RunEncounter extends ViewRecord
     public bool $showInitiativeModal = false;
     public array $initiativeInputs = [];
     public array $combatantsForView = [];
+    public bool $showMonsterDetailModal = false;
+    public ?array $selectedMonsterForModal = null;
 
     /**
 	 * Use the booted() lifecycle hook for setup logic.
@@ -236,9 +238,18 @@ class RunEncounter extends ViewRecord
 				'name' => $mi->monster->name,
 				'order' => $mi->order,
 				'current_health' => $currentHealth,
-				'max_health' => $mi->monster->max_health, // Also corrected this to pull from the base monster.
+				'max_health' => $mi->monster->max_health,
 				'initiative_roll' => $mi->initiative_roll,
-				'original_model' => $mi,
+				// Add base monster stats for inline display
+				'ac' => $mi->monster->ac,
+				'movement' => $mi->monster->movement,
+				'strength' => $mi->monster->strength,
+				'dexterity' => $mi->monster->dexterity,
+				'constitution' => $mi->monster->constitution,
+				'intelligence' => $mi->monster->intelligence,
+				'wisdom' => $mi->monster->wisdom,
+				'charisma' => $mi->monster->charisma,
+				'original_model' => $mi, // Keep original model if needed elsewhere
 			];
 		});
 
@@ -247,6 +258,40 @@ class RunEncounter extends ViewRecord
 													->values()
 													->all();
 	}
+
+    public function showMonsterModal(int $monsterInstanceId): void
+    {
+        $monsterInstance = MonsterInstance::with('monster')->find($monsterInstanceId);
+
+        if (!$monsterInstance || !$monsterInstance->monster) {
+            Notification::make()->title('Monster data not found.')->danger()->send();
+            return;
+        }
+
+        $monster = $monsterInstance->monster;
+
+        $this->selectedMonsterForModal = [
+            'id' => $monsterInstance->id,
+            'name' => $monster->name,
+            'ac' => $monster->ac,
+            'movement' => $monster->movement,
+            'alignment' => $monster->alignment,
+            'strength' => $monster->strength,
+            'dexterity' => $monster->dexterity,
+            'constitution' => $monster->constitution,
+            'intelligence' => $monster->intelligence,
+            'wisdom' => $monster->wisdom,
+            'charisma' => $monster->charisma,
+            'description' => $monster->description,
+			'attacks' => $monster->attacks,
+            'traits' => $monster->traits,
+            'current_health' => $monsterInstance->current_health ?? $monster->max_health,
+            'max_health' => $monster->max_health,
+            // Add any other fields from Monster or MonsterInstance needed in the modal
+        ];
+
+        $this->showMonsterDetailModal = true;
+    }
 
 	public function nextTurn()
 	{
