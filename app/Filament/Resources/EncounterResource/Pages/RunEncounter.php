@@ -32,6 +32,8 @@ class RunEncounter extends ViewRecord
     public bool $showInitiativeModal = false;
     public array $initiativeInputs = [];
     public array $combatantsForView = [];
+    public bool $showMonsterDetailModal = false;
+    public ?array $selectedMonsterForModal = null;
 
     /**
 	 * Use the booted() lifecycle hook for setup logic.
@@ -236,9 +238,18 @@ class RunEncounter extends ViewRecord
 				'name' => $mi->monster->name,
 				'order' => $mi->order,
 				'current_health' => $currentHealth,
-				'max_health' => $mi->monster->max_health, // Also corrected this to pull from the base monster.
+				'max_health' => $mi->monster->max_health,
 				'initiative_roll' => $mi->initiative_roll,
-				'original_model' => $mi,
+				// Add base monster stats for inline display
+				'ac' => $mi->monster->armor_class,
+				'movement' => $mi->monster->movement,
+				'strength' => $mi->monster->strength,
+				'dexterity' => $mi->monster->dexterity,
+				'constitution' => $mi->monster->constitution,
+				'intelligence' => $mi->monster->intelligence,
+				'wisdom' => $mi->monster->wisdom,
+				'charisma' => $mi->monster->charisma,
+				'original_model' => $mi, // Keep original model if needed elsewhere
 			];
 		});
 
@@ -247,6 +258,49 @@ class RunEncounter extends ViewRecord
 													->values()
 													->all();
 	}
+
+    public function showMonsterModal(int $monsterInstanceId): void
+    {
+        $monsterInstance = MonsterInstance::with('monster')->find($monsterInstanceId);
+
+        if (!$monsterInstance || !$monsterInstance->monster) {
+            Notification::make()->title('Monster data not found.')->danger()->send();
+            return;
+        }
+
+        $monster = $monsterInstance->monster;
+        $traits = json_decode($monster->traits, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE && !empty($monster->traits)) {
+            // Log error or notify if JSON is malformed but not empty
+            Log::error("Failed to decode traits JSON for monster ID {$monster->id}: " . json_last_error_msg());
+            $traits = [['name' => 'Error parsing traits', 'description' => 'Could not display traits due to a data error.']];
+        } elseif (empty($traits)) {
+            $traits = []; // Ensure it's an empty array if traits are null or empty JSON string
+        }
+
+
+        $this->selectedMonsterForModal = [
+            'id' => $monsterInstance->id,
+            'name' => $monster->name,
+            'ac' => $monster->armor_class,
+            'movement' => $monster->movement,
+            'alignment' => $monster->alignment,
+            'strength' => $monster->strength,
+            'dexterity' => $monster->dexterity,
+            'constitution' => $monster->constitution,
+            'intelligence' => $monster->intelligence,
+            'wisdom' => $monster->wisdom,
+            'charisma' => $monster->charisma,
+            'description' => $monster->description,
+            'traits' => $traits, // Parsed traits
+            'current_health' => $monsterInstance->current_health ?? $monster->max_health,
+            'max_health' => $monster->max_health,
+            // Add any other fields from Monster or MonsterInstance needed in the modal
+        ];
+
+        $this->showMonsterDetailModal = true;
+    }
 
 	public function nextTurn()
 	{
