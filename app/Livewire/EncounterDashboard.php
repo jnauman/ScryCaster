@@ -72,7 +72,7 @@ class EncounterDashboard extends Component
 				//'ac' => $mi->monster->ac,
 				'order' => $mi->order,
 				'original_model' => $mi,
-				'image' => $mi->image ? Storage::disk('public')->url($mi->image) : '/images/logo_simple.jpeg',
+				'image' => $mi->monster->image ? Storage::disk('public')->url($mi->monster->image) : '/images/logo_simple.jpeg',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'monster-current-turn' : 'monster-not-turn',
 			];
@@ -111,6 +111,9 @@ class EncounterDashboard extends Component
 			// 1. Update the component's state from the event payload.
 			$this->encounter->current_turn = $payload['currentTurn'];
 			$this->encounter->current_round = $payload['currentRound'];
+
+            // Refresh the encounter model instance to ensure relations are fresh
+            $this->encounter->refresh();
 
 			// 2. Reload the combatants list, which will recalculate the CSS classes.
 			$this->loadCombatants();
