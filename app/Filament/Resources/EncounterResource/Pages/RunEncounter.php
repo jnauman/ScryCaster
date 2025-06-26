@@ -18,30 +18,32 @@ use Filament\Notifications\Notification; // Added for notifications
 
 class RunEncounter extends ViewRecord
 {
-    protected static string $resource = EncounterResource::class;
-	protected static string $view = 'filament.resources.encounter-resource.pages.run-encounter';
+	protected static string $resource = EncounterResource::class;
+    protected static string $view = 'filament.resources.encounter-resource.pages.run-encounter';
 
     public bool $showInitiativeModal = false;
     public array $initiativeInputs = [];
-    public array $combatantsForView = []; // For storing combined and sorted combatants
+    public array $combatantsForView = [];
 
-	function mount($record): void
-    {
-        parent::mount($record); // TODO: Filament\Resources\Pages\ViewRecord does not have a mount method. Check if this should be `fillForm()` or similar.
-        $this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
+    /**
+	 * Use the booted() lifecycle hook for setup logic.
+	 * This runs after Filament has loaded the record.
+	 */
+    public function booted(): void
+{
+	$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
 
-        // Check if initiative needs to be set (e.g., current_turn is 0 or null)
-        // And ensure there are combatants
-        $hasPlayers = $this->record->playerCharacters()->exists();
-        $hasMonsters = $this->record->monsterInstances()->exists();
+	$hasPlayers = $this->record->playerCharacters()->exists();
+	$hasMonsters = $this->record->monsterInstances()->exists();
 
-        if (($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
-            $this->showInitiativeModal = true;
-            $this->prepareInitiativeInputs();
-        } else {
-            $this->loadCombatantsForView();
-        }
-    }
+	// This is the same logic as before, but now in the correct place.
+	if (($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
+		$this->showInitiativeModal = true;
+		$this->prepareInitiativeInputs();
+	} else {
+		$this->loadCombatantsForView();
+	}
+}
 
     protected function prepareInitiativeInputs(): void
     {
@@ -129,44 +131,43 @@ class RunEncounter extends ViewRecord
         Notification::make()->title('HP updated for ' . $monsterInstance->monster->name)->success()->send();
     }
 
-    protected function loadCombatantsForView(): void
-    {
-        $this->record->refresh(); // Ensure local record is up-to-date
-        $this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
+	protected function loadCombatantsForView(): void
+	{
+		$this->record->refresh();
+		$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
 
-        $playerCharacters = $this->record->playerCharacters()->orderBy('pivot_order', 'asc')->get()->map(function ($pc) {
-            return [
-                'id' => $pc->id,
-                'type' => 'player',
-                'name' => $pc->name,
-                'order' => $pc->pivot->order,
-                'initiative_roll' => $pc->pivot->initiative_roll,
-                'original_model' => $pc,
-                // Add other player-specific details if needed in the view
-            ];
-        });
+		$playerCharacters = $this->record->playerCharacters()->orderBy('pivot_order', 'asc')->get()->map(function ($pc) {
+			return [
+				'id' => $pc->id,
+				'type' => 'player',
+				'name' => $pc->name,
+				'order' => $pc->pivot->order,
+				'initiative_roll' => $pc->pivot->initiative_roll,
+				'original_model' => $pc,
+			];
+		});
 
-        $monsterInstances = $this->record->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) {
-			$mi->current_health = $mi->current_health ?? $mi->monster->max_health;
+		$monsterInstances = $this->record->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) {
+			// FIX: Use a local variable instead of changing the model property directly.
+			$currentHealth = $mi->current_health ?? $mi->monster->max_health;
 
 			return [
-                'id' => $mi->id,
-                'type' => 'monster_instance',
-                'name' => $mi->monster->name,
-                'order' => $mi->order,
-                'current_health' => $mi->current_health,
-                'max_health' => $mi->max_health,
-                'initiative_roll' => $mi->initiative_roll,
-                'original_model' => $mi,
-                // Add other monster-specific details if needed in the view
-            ];
-        });
+				'id' => $mi->id,
+				'type' => 'monster_instance',
+				'name' => $mi->monster->name,
+				'order' => $mi->order,
+				'current_health' => $currentHealth,
+				'max_health' => $mi->monster->max_health, // Also corrected this to pull from the base monster.
+				'initiative_roll' => $mi->initiative_roll,
+				'original_model' => $mi,
+			];
+		});
 
-        $this->combatantsForView = $playerCharacters->merge($monsterInstances)
-                                       ->sortBy('order') // Sort by the 'order' field
-                                       ->values()        // Re-index the collection
-                                       ->all();
-    }
+		$this->combatantsForView = $playerCharacters->merge($monsterInstances)
+													->sortBy('order')
+													->values()
+													->all();
+	}
 
 	public function nextTurn()
 	{
