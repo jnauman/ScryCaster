@@ -55,7 +55,7 @@ class EncounterDashboard extends Component
 				'class' => $pc->class,
 				'ancestry' => $pc->ancestry,
 				'title' => $pc->title,
-				'original_model' => $pc,
+				// 'original_model' => $pc, // Removed as it might cause issues with Livewire state and isn't used in blade
 				'image' => $pc->image ? Storage::disk('public')->url($pc->image) : '/images/logo_simple.jpeg',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'player-current-turn' : 'player-not-turn',
@@ -71,8 +71,8 @@ class EncounterDashboard extends Component
 				'name' => $mi->monster->name,
 				//'ac' => $mi->monster->ac,
 				'order' => $mi->order,
-				'original_model' => $mi,
-				'image' => $mi->image ? Storage::disk('public')->url($mi->image) : '/images/logo_simple.jpeg',
+				// 'original_model' => $mi, // Removed as it might cause issues with Livewire state and isn't used in blade
+				'image' => $mi->monster->image ? Storage::disk('public')->url($mi->monster->image) : '/images/logo_simple.jpeg',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'monster-current-turn' : 'monster-not-turn',
 			];
@@ -111,6 +111,9 @@ class EncounterDashboard extends Component
 			// 1. Update the component's state from the event payload.
 			$this->encounter->current_turn = $payload['currentTurn'];
 			$this->encounter->current_round = $payload['currentRound'];
+
+            // Refresh the encounter model instance to ensure relations are fresh
+            $this->encounter->refresh();
 
 			// 2. Reload the combatants list, which will recalculate the CSS classes.
 			$this->loadCombatants();

@@ -18,7 +18,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use App\Models\MonsterInstance; // Added for type hinting
 use App\Models\Character; // Added for type hinting
+use App\Models\Monster; // Added for Monster selection
 use Filament\Notifications\Notification; // Added for notifications
+use Filament\Forms\Components\TextInput; // Added for TextInput in action form
+use Illuminate\Support\Str; // Added for Str::plural
 
 
 class RunEncounter extends ViewRecord
@@ -36,16 +39,21 @@ class RunEncounter extends ViewRecord
 	 */
     public function booted(): void
 {
+    Log::debug('RunEncounter booted. Encounter ID: ' . $this->record->id . ', Current Turn: ' . $this->record->current_turn);
 	$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
 
 	$hasPlayers = $this->record->playerCharacters()->exists();
 	$hasMonsters = $this->record->monsterInstances()->exists();
 
+    Log::debug('Has Players: ' . ($hasPlayers ? 'Yes' : 'No') . ', Has Monsters: ' . ($hasMonsters ? 'Yes' : 'No'));
+
 	// This is the same logic as before, but now in the correct place.
 	if (($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
+        Log::debug('Condition met: Showing initiative modal.');
 		$this->showInitiativeModal = true;
 		$this->prepareInitiativeInputs();
 	} else {
+        Log::debug('Condition not met or encounter already started. Loading combatants for view. Current turn: ' . $this->record->current_turn);
 		$this->loadCombatantsForView();
 	}
 }
@@ -101,6 +109,72 @@ class RunEncounter extends ViewRecord
         Notification::make()->title('Initiative saved and encounter started!')->success()->send();
         event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
 
+    }
+
+    public function removeMonsterInstance(int $monsterInstanceId): void
+    {
+        $monsterInstance = MonsterInstance::find($monsterInstanceId);
+
+        if (!$monsterInstance) {
+            Notification::make()->title('Monster instance not found.')->danger()->send();
+            return;
+        }
+
+        $removedOrder = $monsterInstance->order; // Get order before deletion
+        $currentTurnBeforeDelete = $this->record->current_turn;
+
+        $monsterInstance->delete();
+
+        // Recalculate order for all remaining combatants. This re-sequences 'order' column from 1 to N.
+        $this->record->calculateOrder();
+        $this->record->refresh(); // Refresh the record to get updated orders and potentially combatant counts.
+
+        $totalCombatants = $this->record->playerCharacters()->count() + $this->record->monsterInstances()->count();
+
+        if ($totalCombatants === 0) {
+            $this->record->current_turn = 0;
+            // current_round could also be reset or handled as per game rules for empty encounters
+        } else {
+            // If the encounter was active (current_turn was set)
+            if ($currentTurnBeforeDelete !== null && $currentTurnBeforeDelete !== 0) {
+                if ($currentTurnBeforeDelete > $removedOrder) {
+                    // If the active turn was after the removed combatant, its effective position shifts up by 1.
+                    // So, we decrement current_turn to keep it on the same logical combatant.
+                    $this->record->current_turn = $currentTurnBeforeDelete - 1;
+                } elseif ($currentTurnBeforeDelete == $removedOrder) {
+                    // If the removed combatant was the one whose turn it was.
+                    // The turn effectively passes to the next combatant in the new order,
+                    // which now has the same 'order' number, unless it was the last one.
+                    // We just need to ensure current_turn does not exceed the new totalCombatants.
+                    $this->record->current_turn = $currentTurnBeforeDelete; // Stays, but might be clamped
+                    if ($this->record->current_turn > $totalCombatants) {
+                        $this->record->current_turn = $totalCombatants; // Clamp to the new last combatant
+                    }
+                } else { // $currentTurnBeforeDelete < $removedOrder
+                    // If the active turn was before the removed combatant, its number doesn't change.
+                    $this->record->current_turn = $currentTurnBeforeDelete;
+                }
+
+                // Ensure current_turn is at least 1 if there are combatants
+                if ($this->record->current_turn === 0 && $totalCombatants > 0) {
+                    $this->record->current_turn = 1;
+                }
+            } else {
+                // Encounter was not started (current_turn was 0 or null), remains 0 or null if still no combatants,
+                // or will be handled by initiative modal logic if new combatants are added/encounter starts.
+                // For now, if it was 0, keep it 0. If combatants exist, it should ideally be 1 if started.
+                // However, this function assumes an ongoing or ready-to-start encounter.
+                // If current_turn was 0 and totalCombatants > 0, it implies initiative wasn't rolled.
+                // We'll leave current_turn as is, as it's handled by the start encounter flow.
+                 $this->record->current_turn = $currentTurnBeforeDelete; // Retain null or 0
+            }
+        }
+
+        $this->record->save();
+        $this->loadCombatantsForView(); // Refresh the view
+
+        Notification::make()->title('Monster instance removed successfully.')->success()->send();
+        event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
     }
 
     public function updateMonsterHp(int $monsterInstanceId, ?string $newHp): void
@@ -299,6 +373,62 @@ class RunEncounter extends ViewRecord
                         ->send();
                 })
                 ->icon('heroicon-o-arrow-up-tray'),
+
+            Action::make('addMonsters')
+                ->label('Add Monsters')
+                ->icon('heroicon-o-plus-circle')
+                ->form([
+                    Select::make('monster_id')
+                        ->label('Monster')
+                        ->options(Monster::query()->pluck('name', 'id'))
+                        ->searchable()
+                        ->required(),
+                    TextInput::make('quantity')
+                        ->numeric()
+                        ->label('Quantity')
+                        ->default(1)
+                        ->minValue(1)
+                        ->required(),
+                    TextInput::make('initiative_roll')
+                        ->numeric()
+                        ->label('Initiative Roll (Optional)')
+                        ->nullable(),
+                ])
+                ->action(function (array $data) {
+                    $monster = Monster::find($data['monster_id']);
+                    if (!$monster) {
+                        Notification::make()->title('Selected monster not found.')->danger()->send();
+                        return;
+                    }
+
+                    for ($i = 0; $i < $data['quantity']; $i++) {
+                        MonsterInstance::create([
+                            'encounter_id' => $this->record->id,
+                            'monster_id' => $monster->id,
+                            'current_health' => $monster->max_health, // Assuming Monster model has max_health
+                            'max_health' => $monster->max_health,     // Assuming Monster model has max_health
+                            'initiative_roll' => $data['initiative_roll'], // Can be null
+                            // 'order' will be set by calculateOrder
+                        ]);
+                    }
+
+                    $this->record->calculateOrder();
+                    // If encounter hasn't started, new monsters will be included in the initiative prompt
+                    if ($this->record->current_turn === null || $this->record->current_turn === 0) {
+                        $this->showInitiativeModal = true; // Re-trigger modal if encounter not started
+                        $this->prepareInitiativeInputs();  // It will now include the new monsters
+                    } else {
+                        // If encounter started, and no initiative was given, they get null/0.
+                        // GM might need to manually adjust or we'd need a more complex "edit initiative" feature.
+                        // For now, they are added and order is recalculated.
+                    }
+
+                    $this->record->save(); // Save encounter if current_turn/round changed by calculateOrder implicitly (though unlikely)
+                    $this->loadCombatantsForView(); // Refresh the view
+
+                    Notification::make()->title( $data['quantity'] . ' ' . Str::plural($monster->name, $data['quantity']) . ' added.')->success()->send();
+                    event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
+                }),
 		];
 	}
 }
