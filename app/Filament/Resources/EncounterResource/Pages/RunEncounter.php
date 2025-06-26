@@ -241,7 +241,7 @@ class RunEncounter extends ViewRecord
 				'max_health' => $mi->monster->max_health,
 				'initiative_roll' => $mi->initiative_roll,
 				// Add base monster stats for inline display
-				'ac' => $mi->monster->armor_class,
+				'ac' => $mi->monster->ac,
 				'movement' => $mi->monster->movement,
 				'strength' => $mi->monster->strength,
 				'dexterity' => $mi->monster->dexterity,
@@ -269,21 +269,11 @@ class RunEncounter extends ViewRecord
         }
 
         $monster = $monsterInstance->monster;
-        $traits = json_decode($monster->traits, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE && !empty($monster->traits)) {
-            // Log error or notify if JSON is malformed but not empty
-            Log::error("Failed to decode traits JSON for monster ID {$monster->id}: " . json_last_error_msg());
-            $traits = [['name' => 'Error parsing traits', 'description' => 'Could not display traits due to a data error.']];
-        } elseif (empty($traits)) {
-            $traits = []; // Ensure it's an empty array if traits are null or empty JSON string
-        }
-
 
         $this->selectedMonsterForModal = [
             'id' => $monsterInstance->id,
             'name' => $monster->name,
-            'ac' => $monster->armor_class,
+            'ac' => $monster->ac,
             'movement' => $monster->movement,
             'alignment' => $monster->alignment,
             'strength' => $monster->strength,
@@ -293,7 +283,8 @@ class RunEncounter extends ViewRecord
             'wisdom' => $monster->wisdom,
             'charisma' => $monster->charisma,
             'description' => $monster->description,
-            'traits' => $traits, // Parsed traits
+			'attacks' => $monster->attacks,
+            'traits' => $monster->traits,
             'current_health' => $monsterInstance->current_health ?? $monster->max_health,
             'max_health' => $monster->max_health,
             // Add any other fields from Monster or MonsterInstance needed in the modal
