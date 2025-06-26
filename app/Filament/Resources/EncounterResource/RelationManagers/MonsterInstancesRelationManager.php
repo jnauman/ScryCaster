@@ -31,9 +31,22 @@ class MonsterInstancesRelationManager extends RelationManager
                     ->searchable()
                     ->preload()
                     ->reactive()
-                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set('current_health', Monster::find($state)?->max_health))
+                    ->afterStateUpdated(function (Set $set, ?string $state) {
+                        $monster = Monster::find($state);
+                        if ($monster) {
+                            $set('max_health', $monster->max_health);
+                            $set('current_health', $monster->max_health); // Default current_health to max_health
+                        } else {
+                            $set('max_health', null);
+                            $set('current_health', null);
+                        }
+                    })
                     ->label('Monster Type')
                     ->columnSpanFull(),
+                TextInput::make('max_health')
+                    ->numeric()
+                    ->required()
+                    ->label('Max HP'),
                 TextInput::make('current_health')
                     ->numeric()
                     ->required()

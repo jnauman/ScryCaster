@@ -16,11 +16,163 @@ use App\Events\EncounterImageUpdated;
 use App\Models\CampaignImage;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use App\Models\MonsterInstance; // Added for type hinting
+use App\Models\Character; // Added for type hinting
+use Filament\Notifications\Notification; // Added for notifications
+
 
 class RunEncounter extends ViewRecord
 {
-    protected static string $resource = EncounterResource::class;
-	protected static string $view = 'filament.resources.encounter-resource.pages.run-encounter';
+	protected static string $resource = EncounterResource::class;
+    protected static string $view = 'filament.resources.encounter-resource.pages.run-encounter';
+
+    public bool $showInitiativeModal = false;
+    public array $initiativeInputs = [];
+    public array $combatantsForView = [];
+
+    /**
+	 * Use the booted() lifecycle hook for setup logic.
+	 * This runs after Filament has loaded the record.
+	 */
+    public function booted(): void
+{
+	$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
+
+	$hasPlayers = $this->record->playerCharacters()->exists();
+	$hasMonsters = $this->record->monsterInstances()->exists();
+
+	// This is the same logic as before, but now in the correct place.
+	if (($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
+		$this->showInitiativeModal = true;
+		$this->prepareInitiativeInputs();
+	} else {
+		$this->loadCombatantsForView();
+	}
+}
+
+    protected function prepareInitiativeInputs(): void
+    {
+        $this->initiativeInputs = [];
+        $this->record->playerCharacters->each(function (Character $pc) {
+            $this->initiativeInputs[] = [
+                'id' => $pc->id,
+                'name' => $pc->name,
+                'initiative' => $pc->pivot->initiative_roll ?? null,
+                'type' => 'player',
+                'key' => 'player_' . $pc->id, // Unique key for wire:model
+            ];
+        });
+        $this->record->monsterInstances->each(function (MonsterInstance $mi) {
+            $this->initiativeInputs[] = [
+                'id' => $mi->id,
+                'name' => $mi->monster->name,
+                'initiative' => $mi->initiative_roll ?? null,
+                'type' => 'monster_instance',
+                'key' => 'monster_' . $mi->id, // Unique key for wire:model
+            ];
+        });
+    }
+
+    public function saveInitiativesAndStartEncounter(): void
+    {
+        if (empty($this->initiativeInputs)) {
+            Notification::make()->title('No combatants to set initiative for.')->warning()->send();
+            return;
+        }
+
+        foreach ($this->initiativeInputs as $input) {
+            $initiativeValue = is_numeric($input['initiative']) ? (int)$input['initiative'] : 0;
+            if ($input['type'] === 'player') {
+                $this->record->playerCharacters()->updateExistingPivot($input['id'], ['initiative_roll' => $initiativeValue]);
+            } elseif ($input['type'] === 'monster_instance') {
+                MonsterInstance::find($input['id'])->update(['initiative_roll' => $initiativeValue]);
+            }
+        }
+
+        $this->record->calculateOrder(); // This method should exist on the Encounter model
+        $this->record->current_turn = 1;
+        $this->record->current_round = 1;
+        $this->record->save();
+
+        $this->showInitiativeModal = false;
+        $this->loadCombatantsForView(); // Refresh combatant list for the view
+        $this->dispatch('refresh'); // General refresh event if needed, or specific component refresh
+
+        Notification::make()->title('Initiative saved and encounter started!')->success()->send();
+        event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
+
+    }
+
+    public function updateMonsterHp(int $monsterInstanceId, ?string $newHp): void
+    {
+        $monsterInstance = MonsterInstance::find($monsterInstanceId);
+        if (!$monsterInstance) {
+            Notification::make()->title('Monster not found.')->danger()->send();
+            return;
+        }
+
+        $validatedHp = is_numeric($newHp) ? (int)$newHp : null;
+
+        if ($validatedHp === null) {
+            // Allow clearing HP if needed, or set to 0 if preferred
+            // For now, let's assume null means no change or error, depending on desired UX
+            // Or perhaps revert to old value if input is cleared.
+            // For this implementation, we'll just not update if non-numeric.
+             Notification::make()->title('Invalid HP value.')->warning()->send();
+            return;
+        }
+
+        if ($validatedHp < 0) {
+            $validatedHp = 0;
+        } elseif ($validatedHp > $monsterInstance->max_health) {
+            $validatedHp = $monsterInstance->max_health;
+        }
+
+        $monsterInstance->current_health = $validatedHp;
+        $monsterInstance->save();
+
+        $this->loadCombatantsForView(); // Refresh the combatant list in the view with updated HP
+        // No need to dispatch TurnChanged here, only HP updated.
+        Notification::make()->title('HP updated for ' . $monsterInstance->monster->name)->success()->send();
+    }
+
+	protected function loadCombatantsForView(): void
+	{
+		$this->record->refresh();
+		$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
+
+		$playerCharacters = $this->record->playerCharacters()->orderBy('pivot_order', 'asc')->get()->map(function ($pc) {
+			return [
+				'id' => $pc->id,
+				'type' => 'player',
+				'name' => $pc->name,
+				'order' => $pc->pivot->order,
+				'initiative_roll' => $pc->pivot->initiative_roll,
+				'original_model' => $pc,
+			];
+		});
+
+		$monsterInstances = $this->record->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) {
+			// FIX: Use a local variable instead of changing the model property directly.
+			$currentHealth = $mi->current_health ?? $mi->monster->max_health;
+
+			return [
+				'id' => $mi->id,
+				'type' => 'monster_instance',
+				'name' => $mi->monster->name,
+				'order' => $mi->order,
+				'current_health' => $currentHealth,
+				'max_health' => $mi->monster->max_health, // Also corrected this to pull from the base monster.
+				'initiative_roll' => $mi->initiative_roll,
+				'original_model' => $mi,
+			];
+		});
+
+		$this->combatantsForView = $playerCharacters->merge($monsterInstances)
+													->sortBy('order')
+													->values()
+													->all();
+	}
 
 	public function nextTurn()
 	{
