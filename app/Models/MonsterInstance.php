@@ -14,6 +14,7 @@ class MonsterInstance extends Model
         'monster_id',
         'encounter_id',
         'current_health',
+        'max_health',
         'initiative_roll',
         'order',
     ];
