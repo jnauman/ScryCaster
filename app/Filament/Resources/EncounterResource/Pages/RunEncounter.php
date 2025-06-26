@@ -52,46 +52,60 @@ class RunEncounter extends ViewRecord
 	protected function getHeaderActions(): array
 	{
 		return [
-            Action::make('selectCampaignImage')
-                ->label('Select Image')
-                ->form([
-                    Select::make('selected_campaign_image_id')
-                        ->label('Choose an Image')
-                        ->options(function () {
-                            if (!$this->record->campaign_id) {
-                                return [];
-                            }
-                            return CampaignImage::where('campaign_id', $this->record->campaign_id)
-                                ->get()
-                                ->mapWithKeys(function (CampaignImage $image) {
-                                    $caption = $image->caption ? " ({$image->caption})" : '';
-                                    $imageUrl = $image->image_url; // Uses the accessor
-                                    return [$image->id => new HtmlString(
-                                        '<div style="display: flex; align-items: center;">' .
-                                        '<img src="' . e($imageUrl) . '" alt="' . e($image->original_filename) . '" style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px; border-radius: 4px;" />' .
-                                        '<div>' .e($image->original_filename . $caption) . '</div>'.
-                                        '</div>'
-                                    )];
-                                })
-                                ->all();
-                        })
-                        ->allowHtml() // Important for rendering the image tag
-                        ->searchable()
-                        ->required()
-                        ->default($this->record->selected_campaign_image_id),
-                ])
-                ->action(function (array $data) {
-                    $this->record->update(['selected_campaign_image_id' => $data['selected_campaign_image_id']]);
-                    $selectedImage = CampaignImage::find($data['selected_campaign_image_id']);
-                    if ($selectedImage) {
-                        event(new EncounterImageUpdated($this->record->id, $selectedImage->image_url));
-                        \Filament\Notifications\Notification::make()
-                            ->title('Image selected successfully')
-                            ->success()
-                            ->send();
-                    }
-                })
-                ->icon('heroicon-o-photo'),
+			Action::make('selectCampaignImage')
+				  ->label('Select Image')
+				  ->form([
+							 Select::make('selected_campaign_image_id')
+								   ->label('Choose an Image')
+								 // This part is working correctly, no changes needed.
+								   ->getOptionLabelUsing(function ($value) {
+									 $image = CampaignImage::find($value);
+									 return $image ? ($image->caption ? "{$image->original_filename} ({$image->caption})" : $image->original_filename) : null;
+								 })
+
+								 // --- START OF CHANGES ---
+								   ->getSearchResultsUsing(function (string $search) {
+									 if (!$this->record->campaign_id) {
+										 return [];
+									 }
+									 return CampaignImage::where('campaign_id', $this->record->campaign_id)
+														 ->where(function ($query) use ($search) {
+															 $query->where('original_filename', 'like', "%{$search}%")
+																   ->orWhere('caption', 'like', "%{$search}%");
+														 })
+														 ->limit(50)
+														 ->get()
+														 ->mapWithKeys(function (CampaignImage $image) {
+															 $caption = $image->caption ? " ({$image->caption})" : '';
+															 $imageUrl = $image->image_url;
+															 return [$image->id =>
+																		 '<div style="display: flex; align-items: center; gap: 10px;">' .
+																		 '<img src="' . e($imageUrl) . '" alt="" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px;" />' .
+																		 '<div>' . e($image->original_filename . $caption) . '</div>' .
+																		 '</div>'
+															 ];
+														 });
+								 })
+
+								 // --- END OF CHANGES ---
+
+								   ->allowHtml() // Still required for the search results
+								   ->searchable() // Keep this, it now feeds the $search term to getSearchResultsUsing
+								   ->required()
+								   ->default($this->record->selected_campaign_image_id),
+						 ])
+				  ->action(function (array $data) {
+					  $this->record->update(['selected_campaign_image_id' => $data['selected_campaign_image_id']]);
+					  $selectedImage = CampaignImage::find($data['selected_campaign_image_id']);
+					  if ($selectedImage) {
+						  event(new EncounterImageUpdated($this->record->id, $selectedImage->image_url));
+						  \Filament\Notifications\Notification::make()
+															  ->title('Image selected successfully')
+															  ->success()
+															  ->send();
+					  }
+				  })
+				  ->icon('heroicon-o-photo'),
 
             Action::make('uploadAndSelectCampaignImage')
                 ->label('Upload New Image')
