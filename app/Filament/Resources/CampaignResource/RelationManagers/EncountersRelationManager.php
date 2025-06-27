@@ -4,23 +4,25 @@ namespace App\Filament\Resources\CampaignResource\RelationManagers;
 
 use App\Filament\Resources\EncounterResource;
 use App\Models\Encounter;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-
+use Filament\Schemas\Schema;
 class EncountersRelationManager extends RelationManager
 {
     protected static string $relationship = 'encounters';
 
-    public function form(Form $form): Form
-    {
-		return $form
-			->schema([
-						 Forms\Components\TextInput::make('name')
+	public function form(Schema $schema): Schema
+	{
+		return $schema
+		->schema([
+						 TextInput::make('name')
 												   ->required()
 												   ->maxLength(255)
 												   ->columnSpanFull(),
@@ -35,13 +37,13 @@ class EncountersRelationManager extends RelationManager
 		return $table
 			->recordTitleAttribute('name') // Assumes 'name' is the main identifying column
 			->columns([
-						  Tables\Columns\TextColumn::make('name')
+						  TextColumn::make('name')
 												   ->searchable()
 												   ->sortable(),
-						  Tables\Columns\TextColumn::make('current_round')
+						  TextColumn::make('current_round')
 												   ->numeric()
 												   ->sortable(),
-						  Tables\Columns\TextColumn::make('created_at')
+						  TextColumn::make('created_at')
 												   ->dateTime()
 												   ->sortable()
 												   ->toggleable(isToggledHiddenByDefault: true),
@@ -51,27 +53,27 @@ class EncountersRelationManager extends RelationManager
 					  ])
 			->headerActions([
 								// Button to create a new encounter FOR THIS CAMPAIGN
-								Tables\Actions\CreateAction::make(),
+								CreateAction::make(),
 							])
-			->actions([
+			->recordActions([
 						  // Button to edit an encounter
 						  //Tables\Actions\EditAction::make(),
-						  Tables\Actions\Action::make('edit')
+						  Action::make('edit')
 											   ->label('Edit')
 											   ->icon('heroicon-o-pencil-square') // Use standard edit icon
-							  ->url(fn (Encounter $record): string => \App\Filament\Resources\EncounterResource::getUrl('edit', ['record' => $record])), // Use FQN for EncounterResource if not imported
+							  ->url(fn (Encounter $record): string => EncounterResource::getUrl('edit', ['record' => $record])), // Use FQN for EncounterResource if not imported
 
 						  // Button to delete an encounter
-						  Tables\Actions\DeleteAction::make(),
+						  DeleteAction::make(),
 						  // Optional: Add a button to go to the "Run Encounter" page
-						  Tables\Actions\Action::make('run')
+						  Action::make('run')
 											   ->label('Run')
 											   ->icon('heroicon-o-play')
 											   ->url(fn (Encounter $record): string => EncounterResource::getUrl('run', ['record' => $record])),
 					  ])
-			->bulkActions([
-							  Tables\Actions\BulkActionGroup::make([
-												   Tables\Actions\DeleteBulkAction::make(),
+			->toolbarActions([
+							  BulkActionGroup::make([
+												   DeleteBulkAction::make(),
 											   ]),
 						  ]);
 	}

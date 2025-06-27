@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use Exception;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\Monster;
@@ -125,7 +126,7 @@ class BulkImportMonsters extends Component
                 $this->dispatch('refreshMonstersTable');
             }
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
             Log::error('Exception during bulk monster import: ' . $e->getMessage() . ' Stack trace: ' . $e->getTraceAsString()); // Debug
             session()->flash('error', 'An unexpected error occurred during import. Please check the logs. Message: ' . $e->getMessage());

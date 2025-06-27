@@ -2,22 +2,33 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\EncounterResource\Pages;
+use App\Filament\Resources\EncounterResource\Pages\CreateEncounter;
+use App\Filament\Resources\EncounterResource\Pages\EditEncounter;
+use App\Filament\Resources\EncounterResource\Pages\ListEncounters;
+use App\Filament\Resources\EncounterResource\Pages\RunEncounter;
+use App\Filament\Resources\EncounterResource\RelationManagers\MonsterInstancesRelationManager;
+use App\Filament\Resources\EncounterResource\RelationManagers\PlayerCharactersRelationManager;
+use App\Models\Encounter;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+
 // Corrected: No longer using the generic RelationManagers namespace directly for listing them
 // use App\Filament\Resources\EncounterResource\RelationManagers;
-use App\Filament\Resources\EncounterResource\RelationManagers\PlayerCharactersRelationManager;
-use App\Filament\Resources\EncounterResource\RelationManagers\MonsterInstancesRelationManager;
-use App\Models\Encounter;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
 // use Filament\Actions; // Not used as actions are commented out
 // use Filament\Notifications\Notification; // Not used as actions are commented out
-use Illuminate\Database\Eloquent\Builder;
 // use Illuminate\Database\Eloquent\SoftDeletingScope; // Not used
-use Illuminate\Support\Facades\Auth;
 
 /**
  * Filament Resource for managing Encounter models.
@@ -32,19 +43,18 @@ class EncounterResource extends Resource
 	protected static ?string $model = Encounter::class;
 
 	/** @var string|null The icon to use for navigation. Uses Heroicons. */
-	protected static ?string $navigationIcon = 'heroicon-o-sparkles'; // Icon representing encounters or events.
-
-	/**
-	 * Defines the form schema for creating and editing Encounters.
-	 *
-	 * @param \Filament\Forms\Form $form The form instance.
-	 * @return \Filament\Forms\Form The configured form.
-	 */
-	public static function form(Form $form): Form
+	protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-sparkles'; // Icon representing encounters or events.
+    /**
+     * Defines the form schema for creating and editing Encounters.
+     *
+     * @param \Filament\Schemas\Schema $schema The form instance.
+     * @return \Filament\Schemas\Schema The configured form.
+     */
+	public static function form(Schema $schema): Schema
 	{
-		return $form
+		return $schema
 			->schema([
-				Forms\Components\Select::make('campaign_id')
+						 Select::make('campaign_id')
 					->label('Campaign')
 					->relationship(
 						name: 'campaign', // The relationship method name on the Encounter model.
@@ -58,7 +68,7 @@ class EncounterResource extends Resource
 					->required()   // A campaign must be selected.
 					->native(false), // Uses Filament's styled dropdown instead of the browser's native one.
 
-				Forms\Components\TextInput::make('name')
+				TextInput::make('name')
 					->label('Encounter Name')
 					->required()
 					->maxLength(255)
@@ -73,21 +83,21 @@ class EncounterResource extends Resource
 	}
 
 	/**
-	 * Defines the table columns for listing Encounters.
-	 *
-	 * @param \Filament\Tables\Table $table The table instance.
-	 * @return \Filament\Tables\Table The configured table.
-	 */
-	public static function table(Table $table): Table
+     * Defines the table columns for listing Encounters.
+     *
+     * @param Table $table The table instance.
+     * @return Table The configured table.
+     */
+    public static function table(Table $table): Table
 	{
 		return $table
 			->columns([
-				Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-				Tables\Columns\TextColumn::make('campaign.name')->label('Campaign')->searchable()->sortable(),
-				Tables\Columns\TextColumn::make('current_round')->label('Round')->sortable(),
+				TextColumn::make('name')->searchable()->sortable(),
+				TextColumn::make('campaign.name')->label('Campaign')->searchable()->sortable(),
+				TextColumn::make('current_round')->label('Round')->sortable(),
 				// Tables\Columns\TextColumn::make('current_turn')->label('Turn')->sortable(), // Optional, might be too granular for list view
-				Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
-				Tables\Columns\TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+				TextColumn::make('created_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+				TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
 			])
 			->filters([
 				// Filters can be added here, e.g., by campaign.
@@ -95,31 +105,31 @@ class EncounterResource extends Resource
 				//     ->label('Campaign')
 				//     ->relationship('campaign', 'name', fn (Builder $query) => $query->where('gm_user_id', Auth::id())),
 			])
-			->actions([
-				Tables\Actions\EditAction::make(),
-				Tables\Actions\DeleteAction::make(),
+			->recordActions([
+				EditAction::make(),
+				DeleteAction::make(),
 				// Potentially a custom action to navigate to the 'run' page for the encounter.
 				// Tables\Actions\Action::make('run')
 				//    ->label('Run Encounter')
 				//    ->url(fn (Encounter $record): string => static::getUrl('run', ['record' => $record]))
 				//    ->icon('heroicon-o-play'),
 			])
-			->bulkActions([
-				Tables\Actions\BulkActionGroup::make([
-					Tables\Actions\DeleteBulkAction::make(),
+			->toolbarActions([
+				BulkActionGroup::make([
+					DeleteBulkAction::make(),
 				]),
 			]);
 	}
 
 	/**
-	 * Defines the relation managers for this resource.
-	 *
-	 * This allows managing characters associated with an encounter directly
-	 * from the encounter's edit page.
-	 *
-	 * @return array<class-string<\Filament\Resources\RelationManagers\RelationManager>>
-	 */
-	public static function getRelations(): array
+     * Defines the relation managers for this resource.
+     *
+     * This allows managing characters associated with an encounter directly
+     * from the encounter's edit page.
+     *
+     * @return array<class-string<RelationManager>>
+     */
+    public static function getRelations(): array
 	{
 		return [
             PlayerCharactersRelationManager::class,
@@ -137,10 +147,10 @@ class EncounterResource extends Resource
 	public static function getPages(): array
 	{
 		return [
-			'index' => Pages\ListEncounters::route('/'),         // Main listing page.
-			'create' => Pages\CreateEncounter::route('/create'),   // Encounter creation page.
-			'edit' => Pages\EditEncounter::route('/{record}/edit'), // Encounter editing page.
-			'run' => Pages\RunEncounter::route('/{record}/run'),   // Custom page to "run" or manage an active encounter.
+			'index' => ListEncounters::route('/'),         // Main listing page.
+			'create' => CreateEncounter::route('/create'),   // Encounter creation page.
+			'edit' => EditEncounter::route('/{record}/edit'), // Encounter editing page.
+			'run' => RunEncounter::route('/{record}/run'),   // Custom page to "run" or manage an active encounter.
 		];
 	}
 

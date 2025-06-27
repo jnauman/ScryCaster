@@ -93,12 +93,12 @@ public function calculateOrder(): void
 }
 
 	/**
-	 * Defines the many-to-many relationship with player characters participating in this encounter.
-	 * Uses the 'encounter_character' pivot table.
-	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
-	 */
-	public function playerCharacters(): BelongsToMany
+     * Defines the many-to-many relationship with player characters participating in this encounter.
+     * Uses the 'encounter_character' pivot table.
+     *
+     * @return BelongsToMany
+     */
+    public function playerCharacters(): BelongsToMany
 	{
 		// An Encounter can have many Player Characters (via Character model),
 		// and a Player Character can be in many Encounters.
@@ -130,7 +130,7 @@ public function calculateOrder(): void
 		// is in different places for players (pivot->order) and monsters (order).
 		$sortedCombatants = $allCombatants->sortBy(function ($combatant) {
 			// Check if the combatant is a Character model
-			if ($combatant instanceof \App\Models\Character) {
+			if ($combatant instanceof Character) {
 				return $combatant->pivot->order;
 			}
 			// Otherwise, it's a MonsterInstance model
@@ -141,22 +141,22 @@ public function calculateOrder(): void
 	}
 
 	/**
-	 * Defines the relationship to the Campaign this encounter belongs to.
-	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-	 */
-	public function campaign(): BelongsTo
+     * Defines the relationship to the Campaign this encounter belongs to.
+     *
+     * @return BelongsTo
+     */
+    public function campaign(): BelongsTo
 	{
 		// An Encounter belongs to one Campaign.
 		return $this->belongsTo(Campaign::class);
 	}
 
 	/**
-	 * Defines the relationship to the selected CampaignImage for this encounter.
-	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
-	 */
-	public function selectedCampaignImage(): BelongsTo
+     * Defines the relationship to the selected CampaignImage for this encounter.
+     *
+     * @return BelongsTo
+     */
+    public function selectedCampaignImage(): BelongsTo
 	{
 		return $this->belongsTo(CampaignImage::class, 'selected_campaign_image_id');
 	}

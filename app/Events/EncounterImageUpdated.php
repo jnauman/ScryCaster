@@ -39,15 +39,15 @@ class EncounterImageUpdated implements ShouldBroadcast
 	}
 
 	/**
-	 * Get the channels the event should broadcast on.
-	 *
-	 * This event broadcasts on a private channel specific to the encounter,
-	 * ensuring only authorized users for that encounter receive updates.
-	 * The channel name will be, e.g., 'private-encounter.123'.
-	 *
-	 * @return array<int, \Illuminate\Broadcasting\Channel>
-	 */
-	public function broadcastOn()
+     * Get the channels the event should broadcast on.
+     *
+     * This event broadcasts on a private channel specific to the encounter,
+     * ensuring only authorized users for that encounter receive updates.
+     * The channel name will be, e.g., 'private-encounter.123'.
+     *
+     * @return array<int, Channel>
+     */
+    public function broadcastOn()
 	{
 		return [
 			new Channel('encounter.' . $this->encounterId),

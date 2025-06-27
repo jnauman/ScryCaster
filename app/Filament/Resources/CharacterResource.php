@@ -2,12 +2,26 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Forms\Form; // Correct import for the form method
+// Remove this: use Filament\Schemas\Schema;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Get; // Correct import for Get utility
+use Filament\Forms\Set; // Correct import for Set utility
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\CharacterResource\Pages\ListCharacters;
+use App\Filament\Resources\CharacterResource\Pages\CreateCharacter;
+use App\Filament\Resources\CharacterResource\Pages\EditCharacter;
 use App\Filament\Resources\CharacterResource\Pages;
 use App\Filament\Resources\CharacterResource\RelationManagers;
 use App\Models\Character;
 use Filament\Forms;
 use Filament\Forms\Components;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -27,145 +41,149 @@ class CharacterResource extends Resource
 	protected static ?string $model = Character::class;
 
 	/** @var string|null The icon to use for navigation. Uses Heroicons. */
-	protected static ?string $navigationIcon = 'heroicon-o-user-group';
+	protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-group';
 
 	/**
 	 * Defines the form schema for creating and editing Characters.
 	 *
-	 * @param \Filament\Forms\Form $form The form instance.
-	 * @return \Filament\Forms\Form The configured form.
+	 * @param \Filament\Forms\Form $form The form instance. // *** CHANGED PARAMETER TYPE HINT ***
+	 * @return \Filament\Forms\Form The configured form.   // *** CHANGED RETURN TYPE HINT ***
 	 */
-	public static function form(Form $form): Form
+	public static function form(Schema $schema): Schema
 	{
-		return $form
+		return $schema
 			->schema([
-				Forms\Components\FileUpload::make('character_json_upload')
-					->label('Character JSON File')
-					->acceptedFileTypes(['application/json'])
-					->maxSize(1024) // Max size in kilobytes (1MB)
-					->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
-						// Initial checks for the state of the uploaded file
-						// $state here is the state of 'character_json_upload'
-						if (! $state instanceof UploadedFile) {
-							// Not an uploaded file instance (e.g., initial null state, or file removed by user)
-							// Clear all related form fields by setting them to their original schema defaults or null
-							$fieldsToReset = ['name', 'ac', 'max_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
-							foreach ($fieldsToReset as $field) {
-								$set($field, $get($field)); // $get($field) will provide the schema default if one is defined, otherwise null for non-FileUpload fields
-							}
-							$set('data', null); // Specifically ensure the 'data' field (for DB JSON) is nulled. $get('data') would refer to the FileUpload.
-							return;
-						}
+					   FileUpload::make('character_json_upload')
+								 ->label('Character JSON File')
+								 ->acceptedFileTypes(['application/json'])
+								 ->maxSize(1024) // Max size in kilobytes (1MB)
+								 ->afterStateUpdated(function (Set $set, Get $get, $state) { // Set and Get correctly typed with new imports
+							   // Initial checks for the state of the uploaded file
+							   // $state here is the state of 'character_json_upload'
+							   if (! $state instanceof UploadedFile) {
+								   // Not an uploaded file instance (e.g., initial null state, or file removed by user)
+								   // Clear all related form fields by setting them to their original schema defaults or null
+								   $fieldsToReset = ['name', 'ac', 'max_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+								   foreach ($fieldsToReset as $field) {
+									   // Note: $get($field) will correctly retrieve the *current* state of the field
+									   // For resetting to default, you might want to consider explicit defaults
+									   // or ensure your schema fields have them. For FileUpload, it will give null.
+									   $set($field, null); // Set to null for a clean reset, or to a default if you have one elsewhere
+								   }
+								   $set('data', null); // Specifically ensure the 'data' field (for DB JSON) is nulled.
+								   return;
+							   }
 
-						if (!$state->isValid()) {
-							// File was uploaded but is not valid (e.g., upload error, too large after initial client check)
-							// Similar logic to clear/reset fields might be desired, or show a specific error
-							// For now, just return, but one might want to clear fields too.
-							return;
-						}
+							   if (!$state->isValid()) {
+								   // File was uploaded but is not valid (e.g., upload error, too large after initial client check)
+								   // Similar logic to clear/reset fields might be desired, or show a specific error
+								   // For now, just return, but one might want to clear fields too.
+								   return;
+							   }
 
-						$content = file_get_contents($state->getRealPath());
-						if ($content === false) {
-							// Handle file read error, maybe log it or show a notification
-							return;
-						}
+							   $content = file_get_contents($state->getRealPath());
+							   if ($content === false) {
+								   // Handle file read error, maybe log it or show a notification
+								   // Optionally: Filament::notify('danger', 'Error reading file content.');
+								   return;
+							   }
 
-						$parsedData = static::parseCharacterJson($content);
+							   $parsedData = static::parseCharacterJson($content);
 
-						if ($parsedData === null) {
-							// JSON parsing failed (invalid JSON)
-							// Clear all related form fields by setting them to their original schema defaults or null
-							$fieldsToReset = ['name', 'ac', 'max_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
-							foreach ($fieldsToReset as $field) {
-								$set($field, $get($field)); // Reset to schema default or null
-							}
-                            $set('data', null); // Specifically ensure the 'data' field (for DB JSON) is nulled.
-							// Optionally: Filament::notify('danger', 'Invalid JSON file. Could not parse character data.');
-							return;
-						}
+							   if ($parsedData === null) {
+								   // JSON parsing failed (invalid JSON)
+								   // Clear all related form fields by setting them to their original schema defaults or null
+								   $fieldsToReset = ['name', 'ac', 'max_health', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+								   foreach ($fieldsToReset as $field) {
+									   $set($field, null); // Reset to null or schema default
+								   }
+								   $set('data', null); // Specifically ensure the 'data' field (for DB JSON) is nulled.
+								   // Optionally: Filament::notify('danger', 'Invalid JSON file. Could not parse character data.');
+								   return;
+							   }
 
-						// Successfully parsed, now set form fields
-						$set('data', $parsedData['data']); // Full original JSON
-						$set('name', $parsedData['name']);
-						$set('ac', $parsedData['ac']);
-						$set('max_health', $parsedData['max_health'] ?? $get('max_health'));
-						$set('strength', $parsedData['strength'] ?? $get('strength'));
-						$set('dexterity', $parsedData['dexterity'] ?? $get('dexterity'));
-						$set('constitution', $parsedData['constitution'] ?? $get('constitution'));
-						$set('intelligence', $parsedData['intelligence'] ?? $get('intelligence'));
-						$set('wisdom', $parsedData['wisdom'] ?? $get('wisdom'));
-						$set('charisma', $parsedData['charisma'] ?? $get('charisma'));
-					})
-					->columnSpanFull(),
-				Forms\Components\TextInput::make('name')
-					->label('Character Name')
-					->required()
-					->maxLength(255)
-					->columnSpanFull(),
-				// The 'type' field is removed as Characters are now always 'player' type.
-				// Ownership is determined by user_id, set automatically.
-				Forms\Components\TextInput::make('ac')
-					->label('Armor Class')
-					->numeric() // Input should be a number.
-					->required(),
-				Forms\Components\TextInput::make('strength')->label('Strength')->numeric()->default(10),
-				Forms\Components\TextInput::make('dexterity')->label('Dexterity')->numeric()->default(10),
-				Forms\Components\TextInput::make('constitution')->label('Constitution')->numeric()->default(10),
-				Forms\Components\TextInput::make('intelligence')->label('Intelligence')->numeric()->default(10),
-				Forms\Components\TextInput::make('wisdom')->label('Wisdom')->numeric()->default(10),
-				Forms\Components\TextInput::make('charisma')->label('Charisma')->numeric()->default(10),
-				Forms\Components\TextInput::make('max_health')
-					->label('Max Health')
-					->numeric()
-					->required()
-					->default(10),
-				// current_health field removed
-				Forms\Components\TextInput::make('class')
-					->label('Class')
-					->maxLength(255),
-				Forms\Components\TextInput::make('ancestry')
-					->label('Ancestry')
-					->maxLength(255),
-				Forms\Components\TextInput::make('title')
-					->label('Title')
-					->maxLength(255),
-				Forms\Components\FileUpload::make('image')
-					->label('Character Image')
-					->disk('public')
-					->directory('character-images')
-					->image()
-					->maxSize(10000),
-			])->columns(2); // Arrange form fields in 2 columns.
+							   // Successfully parsed, now set form fields
+							   $set('data', $parsedData['data']); // Full original JSON
+							   $set('name', $parsedData['name']);
+							   $set('ac', $parsedData['ac']);
+							   $set('max_health', $parsedData['max_health'] ?? 10); // Use a hardcoded default or derive it
+							   $set('strength', $parsedData['strength'] ?? 10);
+							   $set('dexterity', $parsedData['dexterity'] ?? 10);
+							   $set('constitution', $parsedData['constitution'] ?? 10);
+							   $set('intelligence', $parsedData['intelligence'] ?? 10);
+							   $set('wisdom', $parsedData['wisdom'] ?? 10);
+							   $set('charisma', $parsedData['charisma'] ?? 10);
+						   })
+								 ->columnSpanFull(),
+					   TextInput::make('name')
+								->label('Character Name')
+								->required()
+								->maxLength(255)
+								->columnSpanFull(),
+					   // The 'type' field is removed as Characters are now always 'player' type.
+					   // Ownership is determined by user_id, set automatically.
+					   TextInput::make('ac')
+								->label('Armor Class')
+								->numeric() // Input should be a number.
+								->required(),
+					   TextInput::make('strength')->label('Strength')->numeric()->default(10),
+					   TextInput::make('dexterity')->label('Dexterity')->numeric()->default(10),
+					   TextInput::make('constitution')->label('Constitution')->numeric()->default(10),
+					   TextInput::make('intelligence')->label('Intelligence')->numeric()->default(10),
+					   TextInput::make('wisdom')->label('Wisdom')->numeric()->default(10),
+					   TextInput::make('charisma')->label('Charisma')->numeric()->default(10),
+					   TextInput::make('max_health')
+								->label('Max Health')
+								->numeric()
+								->required()
+								->default(10),
+					   // current_health field removed
+					   TextInput::make('class')
+								->label('Class')
+								->maxLength(255),
+					   TextInput::make('ancestry')
+								->label('Ancestry')
+								->maxLength(255),
+					   TextInput::make('title')
+								->label('Title')
+								->maxLength(255),
+					   FileUpload::make('image')
+								 ->label('Character Image')
+								 ->disk('public')
+								 ->directory('character-images')
+								 ->image()
+								 ->maxSize(10000),
+					 ])->columns(2); // Arrange form fields in 2 columns.
 	}
 
 	/**
 	 * Defines the table columns for listing Characters.
 	 *
-	 * @param \Filament\Tables\Table $table The table instance.
-	 * @return \Filament\Tables\Table The configured table.
+	 * @param Table $table The table instance.
+	 * @return Table The configured table.
 	 */
 	public static function table(Table $table): Table
 	{
 		return $table
 			->columns([
-				Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-				// 'type' column removed as it's implicitly 'player'
-				Tables\Columns\TextColumn::make('ac')->label('AC')->sortable(), // Shortened label for Armor Class.
-				Tables\Columns\TextColumn::make('max_health')->label('Max HP')->sortable(),
-				Tables\Columns\TextColumn::make('user.name')->label('Owner (GM)')->sortable(),
-			])
+						  TextColumn::make('name')->searchable()->sortable(),
+						  // 'type' column removed as it's implicitly 'player'
+						  TextColumn::make('ac')->label('AC')->sortable(), // Shortened label for Armor Class.
+						  TextColumn::make('max_health')->label('Max HP')->sortable(),
+						  TextColumn::make('user.name')->label('Owner (GM)')->sortable(),
+					  ])
 			->filters([
-				// Filters can be defined here if needed.
-			])
-			->actions([
-				Tables\Actions\EditAction::make(),
-				Tables\Actions\DeleteAction::make(),
-			])
-			->bulkActions([
-				Tables\Actions\BulkActionGroup::make([
-					Tables\Actions\DeleteBulkAction::make(),
-				]),
-			]);
+						  // Filters can be defined here if needed.
+					  ])
+			->recordActions([
+								EditAction::make(),
+								DeleteAction::make(),
+							])
+			->toolbarActions([
+								 BulkActionGroup::make([
+														   DeleteBulkAction::make(),
+													   ]),
+							 ]);
 	}
 
 	/**
@@ -192,9 +210,9 @@ class CharacterResource extends Resource
 	public static function getPages(): array
 	{
 		return [
-			'index' => Pages\ListCharacters::route('/'),     // Main listing page.
-			'create' => Pages\CreateCharacter::route('/create'), // Character creation page.
-			'edit' => Pages\EditCharacter::route('/{record}/edit'), // Character editing page.
+			'index' => ListCharacters::route('/'),     // Main listing page.
+			'create' => CreateCharacter::route('/create'), // Character creation page.
+			'edit' => EditCharacter::route('/{record}/edit'), // Character editing page.
 		];
 	}
 
