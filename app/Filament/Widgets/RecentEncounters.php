@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Actions\ViewAction;
 use App\Filament\Resources\EncounterResource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -29,8 +30,8 @@ class RecentEncounters extends BaseWidget
 									->label('Created')
 									->since(),
 					  ])
-			->actions([
-						  Tables\Actions\ViewAction::make()->url(fn ($record) => EncounterResource::getUrl('run', ['record' => $record])),
+			->recordActions([
+						  ViewAction::make()->url(fn ($record) => EncounterResource::getUrl('run', ['record' => $record])),
 					  ]);
 	}
 }

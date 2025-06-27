@@ -27,7 +27,7 @@ use Illuminate\Support\Str; // Added for Str::plural
 class RunEncounter extends ViewRecord
 {
 	protected static string $resource = EncounterResource::class;
-    protected static string $view = 'filament.resources.encounter-resource.pages.run-encounter';
+    protected string $view = 'filament.resources.encounter-resource.pages.run-encounter';
 
     public bool $showInitiativeModal = false;
     public array $initiativeInputs = [];
@@ -318,7 +318,7 @@ class RunEncounter extends ViewRecord
 		return [
 			Action::make('selectCampaignImage')
 				  ->label('Select Image')
-				  ->form([
+				  ->schema([
 							 Select::make('selected_campaign_image_id')
 								   ->label('Choose an Image')
 								 // This part is working correctly, no changes needed.
@@ -363,7 +363,7 @@ class RunEncounter extends ViewRecord
 					  $selectedImage = CampaignImage::find($data['selected_campaign_image_id']);
 					  if ($selectedImage) {
 						  event(new EncounterImageUpdated($this->record->id, $selectedImage->image_url));
-						  \Filament\Notifications\Notification::make()
+						  Notification::make()
 															  ->title('Image selected successfully')
 															  ->success()
 															  ->send();
@@ -373,7 +373,7 @@ class RunEncounter extends ViewRecord
 
             Action::make('uploadAndSelectCampaignImage')
                 ->label('Upload New Image')
-                ->form([
+                ->schema([
                     FileUpload::make('new_campaign_image')
                         ->label('Upload Image')
                         ->image()
@@ -387,7 +387,7 @@ class RunEncounter extends ViewRecord
                 ])
                 ->action(function (array $data) {
                     if (!$this->record->campaign_id) {
-                        \Filament\Notifications\Notification::make()
+                        Notification::make()
                             ->title('Error: Encounter not linked to a campaign.')
                             ->danger()
                             ->send();
@@ -405,7 +405,7 @@ class RunEncounter extends ViewRecord
                     $this->record->update(['selected_campaign_image_id' => $newImage->id]);
                     event(new EncounterImageUpdated($this->record->id, $newImage->image_url));
 
-                    \Filament\Notifications\Notification::make()
+                    Notification::make()
                         ->title('Image uploaded and selected successfully')
                         ->success()
                         ->send();
@@ -415,7 +415,7 @@ class RunEncounter extends ViewRecord
             Action::make('addMonsters')
                 ->label('Add Monsters')
                 ->icon('heroicon-o-plus-circle')
-                ->form([
+                ->schema([
                     Select::make('monster_id')
                         ->label('Monster')
                         ->options(Monster::query()->pluck('name', 'id'))

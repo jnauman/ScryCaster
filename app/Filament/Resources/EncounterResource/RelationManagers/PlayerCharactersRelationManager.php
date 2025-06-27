@@ -2,11 +2,15 @@
 
 namespace App\Filament\Resources\EncounterResource\RelationManagers;
 
-use App\Models\Character;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
+use Filament\Actions\AttachAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DetachBulkAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
@@ -16,10 +20,10 @@ class PlayerCharactersRelationManager extends RelationManager
 	protected static string $relationship = 'playerCharacters';
     protected static ?string $recordTitleAttribute = 'name'; // Or keep as is if 'name' is sufficient
 
-	public function form(Form $form): Form
+	public function form(Schema $schema): Schema
 	{
-		return $form
-			->schema([
+		return $schema
+		->schema([
                 TextInput::make('initiative_roll') // This field is on the pivot table
                     ->numeric()
                     ->nullable()
@@ -45,26 +49,26 @@ class PlayerCharactersRelationManager extends RelationManager
 						  //
 					  ])
 			->headerActions([
-                Tables\Actions\AttachAction::make()
+                AttachAction::make()
                     ->preloadRecordSelect()
                     ->recordTitleAttribute('name') // Uses Character's name for selection
                     ->multiple()
-                    ->form(fn (Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect(), // This is the select field for Character
                         TextInput::make('initiative_roll')->numeric()->nullable()->label('Initiative Roll'),
                     ])
                     ->recordSelectSearchColumns(['name']),
                 // Tables\Actions\CreateAction::make(), // Removed: Prefer creating PCs via CharacterResource
 							])
-			->actions([
-                Tables\Actions\EditAction::make(), // Edits pivot table fields defined in form()
-						  Tables\Actions\DetachAction::make(),
-						  Tables\Actions\DeleteAction::make(),
+			->recordActions([
+                EditAction::make(), // Edits pivot table fields defined in form()
+						  DetachAction::make(),
+						  DeleteAction::make(),
 					  ])
-			->bulkActions([
-							  Tables\Actions\BulkActionGroup::make([
-																	   Tables\Actions\DetachBulkAction::make(),
-																	   Tables\Actions\DeleteBulkAction::make(),
+			->toolbarActions([
+							  BulkActionGroup::make([
+																	   DetachBulkAction::make(),
+																	   DeleteBulkAction::make(),
 																   ]),
 						  ]);
 	}

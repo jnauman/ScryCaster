@@ -2,15 +2,16 @@
 
 namespace App\Filament\Resources\EncounterResource\RelationManagers;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Actions\CreateAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use App\Models\Monster;
-use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Set;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
@@ -21,10 +22,10 @@ class MonsterInstancesRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'id'; // Using ID, monster name will be in a column
 
-    public function form(Form $form): Form
-    {
-        return $form
-            ->schema([
+	public function form(Schema $schema): Schema
+	{
+		return $schema
+		->schema([
                 Select::make('monster_id')
                     ->relationship(name: 'monster', titleAttribute: 'name')
                     ->required()
@@ -72,15 +73,15 @@ class MonsterInstancesRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                CreateAction::make(),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

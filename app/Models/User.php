@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,7 +22,7 @@ use Illuminate\Support\Str;
  */
 class User extends Authenticatable implements MustVerifyEmail, FilamentUser
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable; // Includes Notifiable trait for email notifications
 
     /**
@@ -74,36 +75,36 @@ class User extends Authenticatable implements MustVerifyEmail, FilamentUser
     }
 
 	/**
-	 * Determines if the user can access the Filament admin panel.
-	 *
-	 * Currently, access is granted if the user has verified their email address.
-	 *
-	 * @param \Filament\Panel $panel The Filament panel instance.
-	 * @return bool True if the user can access the panel, false otherwise.
-	 */
-	public function canAccessPanel(Panel $panel): bool
+     * Determines if the user can access the Filament admin panel.
+     *
+     * Currently, access is granted if the user has verified their email address.
+     *
+     * @param Panel $panel The Filament panel instance.
+     * @return bool True if the user can access the panel, false otherwise.
+     */
+    public function canAccessPanel(Panel $panel): bool
 	{
 		return $this->hasVerifiedEmail(); // User must have a verified email
 	}
 
 	/**
-	 * Defines the relationship for characters owned by this user.
-	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
-	 */
-	public function characters(): HasMany
+     * Defines the relationship for characters owned by this user.
+     *
+     * @return HasMany
+     */
+    public function characters(): HasMany
 	{
 		return $this->hasMany(Character::class);
 	}
 
 	/**
-	 * Defines the relationship for campaigns where this user is the Game Master (GM).
-	 *
-	 * The foreign key 'gm_user_id' on the 'campaigns' table links back to this user.
-	 *
-	 * @return \Illuminate\Database\Eloquent\Relations\HasMany
-	 */
-	public function campaignsGm(): HasMany
+     * Defines the relationship for campaigns where this user is the Game Master (GM).
+     *
+     * The foreign key 'gm_user_id' on the 'campaigns' table links back to this user.
+     *
+     * @return HasMany
+     */
+    public function campaignsGm(): HasMany
 	{
 		return $this->hasMany(Campaign::class, 'gm_user_id');
 	}

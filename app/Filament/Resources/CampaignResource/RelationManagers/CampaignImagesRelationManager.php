@@ -3,24 +3,34 @@
 namespace App\Filament\Resources\CampaignResource\RelationManagers;
 
 use App\Models\CampaignImage;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\CreateAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Schemas\Schema;
 
 class CampaignImagesRelationManager extends RelationManager
 {
     protected static string $relationship = 'campaignImages';
 
-    public function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\FileUpload::make('image_path')
+	public function form(Schema $schema): Schema
+	{
+		return $schema
+		->schema([
+                FileUpload::make('image_path')
                     ->label('Image')
                     ->required()
                     ->image()
@@ -34,14 +44,14 @@ class CampaignImagesRelationManager extends RelationManager
                         }
                     })
                     ->columnSpanFull(),
-                Forms\Components\TextInput::make('original_filename')
+                TextInput::make('original_filename')
                     ->label('Original Filename')
                     ->maxLength(255)
                     ->helperText('Will be automatically filled from uploaded file, but can be overridden.'),
-                Forms\Components\Textarea::make('caption')
+                Textarea::make('caption')
                     ->label('Caption')
                     ->columnSpanFull(),
-                Forms\Components\Hidden::make('uploader_user_id')
+                Hidden::make('uploader_user_id')
                     ->default(fn () => auth()->id()), // Automatically set the uploader
             ]);
     }
@@ -51,21 +61,21 @@ class CampaignImagesRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('original_filename')
             ->columns([
-                Tables\Columns\ImageColumn::make('image_path')
+                ImageColumn::make('image_path')
                     ->label('Image Preview')
                     ->disk('public')
                     ->width(100)
                     ->height(100),
-                Tables\Columns\TextColumn::make('original_filename')
+                TextColumn::make('original_filename')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('caption')
+                TextColumn::make('caption')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('uploader.name') // Assuming User model has a 'name' attribute
+                TextColumn::make('uploader.name') // Assuming User model has a 'name' attribute
                     ->label('Uploaded By')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -74,15 +84,15 @@ class CampaignImagesRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
-                    ->mutateFormDataUsing(function (array $data): array {
+                CreateAction::make()
+                    ->mutateDataUsing(function (array $data): array {
                         $data['uploader_user_id'] = auth()->id();
                         return $data;
                     }),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make()
                     ->after(function (CampaignImage $record) {
                         // Delete the actual file from storage
                         if ($record->image_path) {
@@ -90,10 +100,10 @@ class CampaignImagesRelationManager extends RelationManager
                         }
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->after(function (\Illuminate\Database\Eloquent\Collection $records) {
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->after(function (Collection $records) {
                             foreach ($records as $record) {
                                 if ($record->image_path) {
                                     Storage::disk('public')->delete($record->image_path);

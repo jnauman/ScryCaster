@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\EncounterResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\EncounterResource;
 use App\Models\Encounter;
 use Filament\Actions;
@@ -15,7 +16,7 @@ class EditEncounter extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
 			Action::make('startEncounter')
 				  ->label('Start Encounter')
 				  ->action(function (Encounter $record) {
