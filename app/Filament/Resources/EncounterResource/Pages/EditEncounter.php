@@ -19,8 +19,8 @@ class EditEncounter extends EditRecord
 			Action::make('startEncounter')
 				  ->label('Start Encounter')
 				  ->action(function (Encounter $record) {
-					  // Flashing the session variable to indicate the user is intentionally starting the encounter
-					  session()->flash('trigger_initiative_modal', true);
+					  // Session flash no longer needed as initiative modal is manually triggered on RunEncounter page.
+					  // This action now simply navigates to the run page.
 
 					  // We might want to reconsider setting current_turn here,
 					  // as the initiative modal on the RunEncounter page is intended to handle the actual start.
