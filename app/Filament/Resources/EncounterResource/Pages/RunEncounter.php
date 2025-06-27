@@ -41,21 +41,16 @@ class RunEncounter extends ViewRecord
 	 */
     public function booted(): void
 {
-    Log::debug('RunEncounter booted. Encounter ID: ' . $this->record->id);
+    
 	$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
-
-    // No longer automatically showing initiative modal.
-    // User will click a button to trigger it.
     // Always load combatants for view on initial page load.
     $this->loadCombatantsForView();
-    Log::debug('Combatants loaded for view. Initiative modal will be user-triggered.');
 }
 
     public function displayInitiativeModal(): void
     {
         $this->prepareInitiativeInputs();
         $this->showInitiativeModal = true;
-        Log::debug('displayInitiativeModal called, showInitiativeModal set to true.');
     }
 
     protected function prepareInitiativeInputs(): void
