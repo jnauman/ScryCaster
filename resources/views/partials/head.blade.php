@@ -12,7 +12,7 @@
 <script>
 document.addEventListener('alpine:init', () => {
     Alpine.store('appTheme', {
-        currentTheme: localStorage.getItem('colorTheme') || 'havelock-blue', // Default theme
+        _currentTheme: localStorage.getItem('colorTheme') || 'havelock-blue',
 
         themes: [
             { name: 'Havelock Blue', value: 'havelock-blue', isDefault: true },
@@ -21,59 +21,67 @@ document.addEventListener('alpine:init', () => {
             { name: 'Mystic & Verdant', value: 'mystic-verdant' },
         ],
 
-        init() {
-            this.applyTheme(this.currentTheme);
-            // Watch for changes from other tabs/windows to localStorage item 'colorTheme'
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'colorTheme' && e.newValue && e.newValue !== this.currentTheme) {
-                    this.currentTheme = e.newValue;
-                    this.applyTheme(this.currentTheme);
-                }
-            });
+        get currentTheme() {
+            return this._currentTheme;
+        },
 
-            // Ensure theme is applied if $flux.appearance changes (e.g. system theme causes change)
-            // This is a bit speculative as we don't know $flux internals, but it's a safeguard.
-            if (window.Alpine && Alpine.store('flux') && typeof Alpine.store('flux').appearance !== 'undefined') {
-                Alpine.effect(() => {
-                    // Re-apply our theme if flux appearance changes,
-                    // just in case flux's own theme logic interferes with data-theme.
-                    // This primarily ensures that if flux refreshes the class list, our data-theme is reapplied.
-                    const fluxAppearance = Alpine.store('flux').appearance;
-                    console.log(`Flux appearance changed to: ${fluxAppearance}, re-applying color theme: ${this.currentTheme}`);
-                    this.applyTheme(this.currentTheme);
-                });
+        set currentTheme(themeName) {
+            // Avoid feedback loop if the value is already set (e.g. from init or another tab)
+            if (this._currentTheme === themeName) {
+                // Ensure theme is applied even if value is same, e.g. on init or if localStorage was manually changed
+                // this.applyTheme(themeName); // This might be too aggressive if called from init
+                return;
+            }
+
+            const foundTheme = this.themes.find(t => t.value === themeName);
+            if (foundTheme) {
+                console.log(`Setting currentTheme from '${this._currentTheme}' to '${themeName}'`);
+                this._currentTheme = themeName;
+                localStorage.setItem('colorTheme', themeName);
+                this.applyTheme(themeName); // Apply the theme when currentTheme is changed by x-model
+            } else {
+                console.warn(`Attempted to set unknown theme via x-model: ${themeName}`);
             }
         },
 
-        setTheme(themeName) {
-            if (this.themes.find(t => t.value === themeName)) {
-                this.currentTheme = themeName;
-                localStorage.setItem('colorTheme', themeName);
-                this.applyTheme(themeName);
-            } else {
-                console.warn(`Attempted to set unknown theme: ${themeName}`);
-            }
+        init() {
+            console.log(`Initializing appTheme with _currentTheme: ${this._currentTheme}`);
+            this.applyTheme(this._currentTheme); // Apply initial theme based on localStorage or default
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'colorTheme' && e.newValue && e.newValue !== this._currentTheme) {
+                    console.log(`Storage event: colorTheme changed from '${this._currentTheme}' to '${e.newValue}'`);
+                    this._currentTheme = e.newValue; // Update internal state
+                    this.applyTheme(this._currentTheme); // Apply theme
+                }
+            });
+
+            // This effect for $flux.appearance can be kept if needed.
+            // For now, let's see if the direct approach works without it, to minimize complexity.
+            // if (window.Alpine && Alpine.store('flux') && typeof Alpine.store('flux').appearance !== 'undefined') {
+            //     Alpine.effect(() => {
+            //         const fluxAppearance = Alpine.store('flux').appearance;
+            //         console.log(`Flux appearance changed to: ${fluxAppearance}, re-applying color theme: ${this._currentTheme}`);
+            //         this.applyTheme(this._currentTheme);
+            //     });
+            // }
         },
 
         applyTheme(themeName) {
             const htmlElement = document.documentElement;
-            // Remove all known theme attributes first to handle switching from a specific theme back to default
-            this.themes.forEach(theme => {
-                if (theme.value !== 'havelock-blue') { // Don't remove default if it's not set via data-theme
-                    htmlElement.removeAttribute(`data-theme-${theme.value}`);
-                }
-            });
+            // Clear previous theme attribute to ensure clean switching
+            // This assumes only one data-theme attribute is used.
+            // htmlElement.removeAttribute('data-theme'); // Simpler removal
 
             if (themeName && themeName !== 'havelock-blue') {
                 htmlElement.setAttribute('data-theme', themeName);
             } else {
                 htmlElement.removeAttribute('data-theme'); // Default theme means no data-theme attribute
             }
-            console.log(`Applied color theme: ${themeName || 'havelock-blue (default)'}`);
+            console.log(`Applied actual color theme attribute for: ${themeName || 'havelock-blue (default)'}`);
         }
     });
 
-    // Initialize the theme when Alpine is ready if the store exists
     if (Alpine.store('appTheme')) {
         Alpine.store('appTheme').init();
     }

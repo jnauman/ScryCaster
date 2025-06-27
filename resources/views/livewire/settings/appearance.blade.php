@@ -4,7 +4,15 @@ use Livewire\Volt\Component;
 
 new class extends Component
 {
-    //
+    public function themes(): array
+    {
+        return [
+            ['name' => 'Havelock Blue', 'value' => 'havelock-blue'],
+            ['name' => 'Earthen & Arcane', 'value' => 'earthen-arcane'],
+            ['name' => 'Heroic & Fiery', 'value' => 'heroic-fiery'],
+            ['name' => 'Mystic & Verdant', 'value' => 'mystic-verdant'],
+        ];
+    }
 }; ?>
 
 <div class="flex flex-col items-start">
@@ -27,10 +35,10 @@ new class extends Component
                     {{ __('Select your preferred color accent for the application.') }}
                 </p>
                 <div x-data class="mt-2">
-                    <flux:radio.group variant="segmented" x-model="$store.appTheme.currentTheme" @change="$store.appTheme.setTheme($event.target.value)">
-                        <template x-for="theme in $store.appTheme.themes" :key="theme.value">
-                            <flux:radio :value="theme.value" x-text="theme.name"></flux:radio>
-                        </template>
+                    <flux:radio.group variant="segmented" x-model="$store.appTheme.currentTheme">
+                        @foreach ($this->themes() as $theme)
+                            <flux:radio value="{{ $theme['value'] }}">{{ $theme['name'] }}</flux:radio>
+                        @endforeach
                     </flux:radio.group>
                 </div>
             </div>
