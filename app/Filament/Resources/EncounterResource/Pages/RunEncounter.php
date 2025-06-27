@@ -56,10 +56,10 @@ class RunEncounter extends ViewRecord
 
 	// Show initiative modal if:
     // 1. Navigated via "Start Encounter" action (session flash is true)
-    // 2. AND Encounter is not started (current_turn is null or 0)
+    // 2. AND Encounter's first round has not properly started (current_round is null or 0)
     // 3. AND There are combatants
-	if ($shouldTriggerModalFromNavigation && ($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
-        Log::debug('Condition met for showing initiative modal: Triggered by navigation and encounter is new.');
+	if ($shouldTriggerModalFromNavigation && ($this->record->current_round === null || $this->record->current_round === 0) && ($hasPlayers || $hasMonsters)) {
+        Log::debug('Condition met for showing initiative modal: Triggered by navigation and encounter round is 0 or null.');
 		$this->showInitiativeModal = true;
 		$this->prepareInitiativeInputs();
 	} else {
