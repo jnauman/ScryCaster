@@ -57,7 +57,7 @@ class EncounterPolicy
 		// Check if the user has any character participating in this specific encounter.
 		// This assumes 'characters' is a relationship on the Encounter model,
 		// and 'user_id' is an attribute on the Character model.
-		return $encounter->characters()->where('user_id', $user->id)->exists();
+		return $encounter->playerCharacters()->where('user_id', $user->id)->exists();
 	}
 
 	/**
