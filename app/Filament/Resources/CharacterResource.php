@@ -134,7 +134,7 @@ class CharacterResource extends Resource
 					->disk('public')
 					->directory('character-images')
 					->image()
-					->maxSize(1024),
+					->maxSize(10000),
 			])->columns(2); // Arrange form fields in 2 columns.
 	}
 
