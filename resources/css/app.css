@@ -229,4 +229,4 @@ input::-webkit-inner-spin-button {
 /* Hide the number input arrows in Firefox */
 input[type=number] {
     -moz-appearance: textfield;
-}}
+}
