@@ -56,7 +56,7 @@ class EncounterDashboard extends Component
 				'ancestry' => $pc->ancestry,
 				'title' => $pc->title,
 				// 'original_model' => $pc, // Removed as it might cause issues with Livewire state and isn't used in blade
-				'image' => $pc->image ? Storage::disk('public')->url($pc->image) : '/images/monster_image.png',
+				'image' => $pc->image ? Storage::disk('public')->url($pc->image) : '/images/torch_bearer.png',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'player-current-turn' : 'player-not-turn',
 			];
@@ -72,7 +72,7 @@ class EncounterDashboard extends Component
 				//'ac' => $mi->monster->ac,
 				'order' => $mi->order,
 				// 'original_model' => $mi, // Removed as it might cause issues with Livewire state and isn't used in blade
-				'image' => $mi->monster->image ? Storage::disk('public')->url($mi->monster->image) : '/images/logo_simple.jpeg',
+				'image' => $mi->monster->image ? Storage::disk('public')->url($mi->monster->image) : '/images/monster_image.png',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'monster-current-turn' : 'monster-not-turn',
 			];
