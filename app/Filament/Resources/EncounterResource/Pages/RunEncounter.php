@@ -41,7 +41,7 @@ class RunEncounter extends ViewRecord
 	 */
     public function booted(): void
 {
-    Log::debug('RunEncounter booted. Encounter ID: ' . $this->record->id . ', Current Turn: ' . $this->record->current_turn);
+    Log::debug('RunEncounter booted. Encounter ID: ' . $this->record->id . ', Current Turn: ' . $this->record->current_turn . ', Current Round: ' . $this->record->current_round);
 	$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
 
 	$hasPlayers = $this->record->playerCharacters()->exists();
@@ -49,13 +49,16 @@ class RunEncounter extends ViewRecord
 
     Log::debug('Has Players: ' . ($hasPlayers ? 'Yes' : 'No') . ', Has Monsters: ' . ($hasMonsters ? 'Yes' : 'No'));
 
-	// This is the same logic as before, but now in the correct place.
-	if (($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
-        Log::debug('Condition met: Showing initiative modal.');
+	// New condition: Show modal if not actively in progress past R1, T1
+    // Actively in progress: ($this->record->current_round == 1 && $this->record->current_turn > 1) || $this->record->current_round > 1
+    $isActivelyInProgress = ($this->record->current_round == 1 && $this->record->current_turn > 1) || ($this->record->current_round !== null && $this->record->current_round > 1);
+
+	if (! $isActivelyInProgress && ($hasPlayers || $hasMonsters)) {
+        Log::debug('Condition met for showing initiative modal (not actively in progress or at the very start).');
 		$this->showInitiativeModal = true;
 		$this->prepareInitiativeInputs();
 	} else {
-        Log::debug('Condition not met or encounter already started. Loading combatants for view. Current turn: ' . $this->record->current_turn);
+        Log::debug('Condition not met for initiative modal (actively in progress or no combatants). Loading combatants for view. Current turn: ' . $this->record->current_turn . ', Current round: ' . $this->record->current_round);
 		$this->loadCombatantsForView();
 	}
 }
