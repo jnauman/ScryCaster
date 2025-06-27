@@ -41,27 +41,17 @@ class RunEncounter extends ViewRecord
 	 */
     public function booted(): void
 {
-    Log::debug('RunEncounter booted. Encounter ID: ' . $this->record->id . ', Current Turn: ' . $this->record->current_turn . ', Current Round: ' . $this->record->current_round);
+    
 	$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
-
-	$hasPlayers = $this->record->playerCharacters()->exists();
-	$hasMonsters = $this->record->monsterInstances()->exists();
-
-    Log::debug('Has Players: ' . ($hasPlayers ? 'Yes' : 'No') . ', Has Monsters: ' . ($hasMonsters ? 'Yes' : 'No'));
-
-	// New condition: Show modal if not actively in progress past R1, T1
-    // Actively in progress: ($this->record->current_round == 1 && $this->record->current_turn > 1) || $this->record->current_round > 1
-    $isActivelyInProgress = ($this->record->current_round == 1 && $this->record->current_turn > 1) || ($this->record->current_round !== null && $this->record->current_round > 1);
-
-	if (! $isActivelyInProgress && ($hasPlayers || $hasMonsters)) {
-        Log::debug('Condition met for showing initiative modal (not actively in progress or at the very start).');
-		$this->showInitiativeModal = true;
-		$this->prepareInitiativeInputs();
-	} else {
-        Log::debug('Condition not met for initiative modal (actively in progress or no combatants). Loading combatants for view. Current turn: ' . $this->record->current_turn . ', Current round: ' . $this->record->current_round);
-		$this->loadCombatantsForView();
-	}
+    // Always load combatants for view on initial page load.
+    $this->loadCombatantsForView();
 }
+
+    public function displayInitiativeModal(): void
+    {
+        $this->prepareInitiativeInputs();
+        $this->showInitiativeModal = true;
+    }
 
     protected function prepareInitiativeInputs(): void
     {

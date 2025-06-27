@@ -5,7 +5,14 @@
 			{{-- Page Header --}}
 			<h1 class="text-2xl font-bold mb-4">Run Encounter: {{ $record->name }}</h1>
 			<p class="text-lg mb-2">Round: <span class="font-semibold">{{ $record->current_round ?? 0 }}</span></p>
-			<p class="text-lg mb-4">Turn: <span class="font-semibold">{{ $record->current_turn ?? 'Not Started' }}</span></p>
+			<p class="text-lg mb-2">Turn: <span class="font-semibold">{{ $record->current_turn ?? 'Not Started' }}</span></p>
+
+            {{-- Manual Initiative Button --}}
+            <div class="my-4">
+                <x-filament::button wire:click="displayInitiativeModal" icon="heroicon-o-play">
+                    Roll Initiative!
+                </x-filament::button>
+            </div>
 
 			{{-- Monster Detail Modal --}}
 			@if ($this->showMonsterDetailModal && $this->selectedMonsterForModal)
