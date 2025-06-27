@@ -56,7 +56,7 @@ class EncounterDashboard extends Component
 				'ancestry' => $pc->ancestry,
 				'title' => $pc->title,
 				// 'original_model' => $pc, // Removed as it might cause issues with Livewire state and isn't used in blade
-				'image' => $pc->image ? Storage::disk('public')->url($pc->image) : '/images/logo_simple.jpeg',
+				'image' => $pc->image ? Storage::disk('public')->url($pc->image) : '/images/monster_image.png',
 				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'player-current-turn' : 'player-not-turn',
 			];
