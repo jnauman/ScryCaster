@@ -8,9 +8,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Base theme (default, perhaps the one you like best or a neutral one) */
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
+    /* Zinc Neutrals (common across all themes) */
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
     --color-zinc-200: #e5e5e5;
@@ -23,18 +25,12 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-fuchsia-pink-50: #fbf5fe;
-    --color-fuchsia-pink-100: #f7ebfc;
-    --color-fuchsia-pink-200: #f0d6f8;
-    --color-fuchsia-pink-300: #e5b5f2;
-    --color-fuchsia-pink-400: #d589e9;
-    --color-fuchsia-pink-500: #c15bda;
-    --color-fuchsia-pink-600: #b14cc7;
-    --color-fuchsia-pink-700: #8b2e9d;
-    --color-fuchsia-pink-800: #742880;
-    --color-fuchsia-pink-900: #61256a;
-    --color-fuchsia-pink-950: #3e0d45;
+    /* Define your first default theme (e.g., Havelock Blue as a baseline or one of the new ones) */
+    --color-accent: var(--color-havelock-blue-400); /* Default accent */
+    --color-accent-content: var(--color-havelock-blue-600);
+    --color-accent-foreground: var(--color-havelock-blue-900);
 
+    /* Havelock Blue (Current/Default if you choose) */
     --color-havelock-blue-50: #f0f7fe;
     --color-havelock-blue-100: #deecfb;
     --color-havelock-blue-200: #c4dff9;
@@ -47,78 +43,178 @@
     --color-havelock-blue-900: #264382;
     --color-havelock-blue-950: #1b2a50;
 
+    /* Fuchsia Pink (Current) */
+    --color-fuchsia-pink-50: #fbf5fe;
+    --color-fuchsia-pink-100: #f7ebfc;
+    --color-fuchsia-pink-200: #f0d6f8;
+    --color-fuchsia-pink-300: #e5b5f2;
+    --color-fuchsia-pink-400: #d589e9;
+    --color-fuchsia-pink-500: #c15bda;
+    --color-fuchsia-pink-600: #b14cc7;
+    --color-fuchsia-pink-700: #8b2e9d;
+    --color-fuchsia-pink-800: #742880;
+    --color-fuchsia-pink-900: #61256a;
+    --color-fuchsia-pink-950: #3e0d45;
 
-
-
-    --color-accent: var(--color-havelock-blue-400);
-    --color-accent-content: var(--color-havelock-blue-600);
-    --color-accent-foreground: var(--color-havelock-blue-900);
+    /* Global current turn indicator color (can be customized per theme if desired) */
+    --color-turn-indicator: #F59E0B; /* A golden orange */
 }
 
+/* --- Theme Definitions --- */
+
+/* Theme 1: Earthen & Arcane (Green & Purple) */
+html[data-theme="earthen-arcane"] {
+    --color-emerald-50: #ECFDF5;
+    --color-emerald-100: #D1FAE5;
+    --color-emerald-200: #A7F3D0;
+    --color-emerald-300: #6EE7B7;
+    --color-emerald-400: #34D399; /* Primary accent */
+    --color-emerald-500: #10B981;
+    --color-emerald-600: #059669;
+    --color-emerald-700: #047857;
+    --color-emerald-800: #065F46;
+    --color-emerald-900: #064E40;
+    --color-emerald-950: #022C22;
+
+    --color-violet-50: #F5F3FF;
+    --color-violet-100: #EDE9FE;
+    --color-violet-200: #DDD6FE;
+    --color-violet-300: #C4B5FD;
+    --color-violet-400: #A78BFA; /* Secondary accent */
+    --color-violet-500: #8B5CF6;
+    --color-violet-600: #7C3AED;
+    --color-violet-700: #6D28D9;
+    --color-violet-800: #5B21B6;
+    --color-violet-900: #4C1D95;
+    --color-violet-950: #2C0F51;
+
+    --color-accent: var(--color-emerald-400); /* Primary theme accent */
+    --color-accent-content: var(--color-emerald-600);
+    --color-accent-foreground: var(--color-emerald-900); /* Or emerald-950 for dark */
+
+    /* Player/Monster colors for this theme */
+    .player-not-turn { background-color: var(--color-emerald-900); border-color: var(--color-emerald-900); }
+    .player-current-turn { background-color: var(--color-emerald-400); border-color: var(--color-emerald-900); color: var(--color-turn-indicator); }
+    .monster-not-turn { background-color: var(--color-violet-900); border-color: var(--color-violet-900); }
+    .monster-current-turn { background-color: var(--color-violet-400); border-color: var(--color-violet-900); color: var(--color-turn-indicator); }
+}
+
+/* Theme 2: Heroic & Fiery (Blue & Red/Orange) */
+html[data-theme="heroic-fiery"] {
+    --color-azure-50: #eff6ff; /* Standard blue palette for example */
+    --color-azure-100: #dbeafe;
+    --color-azure-200: #bfdbfe;
+    --color-azure-300: #93c5fd;
+    --color-azure-400: #60a5fa; /* Primary accent */
+    --color-azure-500: #3b82f6;
+    --color-azure-600: #2563eb;
+    --color-azure-700: #1d4ed8;
+    --color-azure-800: #1e40af;
+    --color-azure-900: #1e3a8a;
+    --color-azure-950: #172554;
+
+    --color-magma-50: #fef2f2; /* Standard red/orange palette for example */
+    --color-magma-100: #fee2e2;
+    --color-magma-200: #fecaca;
+    --color-magma-300: #fca5a5;
+    --color-magma-400: #f87171; /* Secondary accent */
+    --color-magma-500: #ef4444;
+    --color-magma-600: #dc2626;
+    --color-magma-700: #b91c1c;
+    --color-magma-800: #991b1b;
+    --color-magma-900: #7f1d1d;
+    --color-magma-950: #450a0a;
+
+    --color-accent: var(--color-azure-400);
+    --color-accent-content: var(--color-azure-600);
+    --color-accent-foreground: var(--color-azure-900);
+
+    .player-not-turn { background-color: var(--color-azure-900); border-color: var(--color-azure-900); }
+    .player-current-turn { background-color: var(--color-azure-400); border-color: var(--color-azure-900); color: var(--color-turn-indicator); }
+    .monster-not-turn { background-color: var(--color-magma-900); border-color: var(--color-magma-900); }
+    .monster-current-turn { background-color: var(--color-magma-400); border-color: var(--color-magma-900); color: var(--color-turn-indicator); }
+}
+
+/* Theme 3: Mystic & Verdant (Teal & Plum/Crimson) */
+html[data-theme="mystic-verdant"] {
+    --color-teal-50: #f0fdfa; /* Standard teal palette for example */
+    --color-teal-100: #ccfbf1;
+    --color-teal-200: #99f6e4;
+    --color-teal-300: #5eead4;
+    --color-teal-400: #2dd4bf; /* Primary accent */
+    --color-teal-500: #14b8a6;
+    --color-teal-600: #0d9488;
+    --color-teal-700: #0f766e;
+    --color-teal-800: #115e59;
+    --color-teal-900: #134e4a;
+    --color-teal-950: #042f2e;
+
+    --color-plum-50: #fdf2f8; /* Standard plum/rose palette for example */
+    --color-plum-100: #fce7f3;
+    --color-plum-200: #fbcfe8;
+    --color-plum-300: #f9a8d4;
+    --color-plum-400: #f472b6; /* Secondary accent */
+    --color-plum-500: #ec4899;
+    --color-plum-600: #db2777;
+    --color-plum-700: #be185d;
+    --color-plum-800: #9d174d;
+    --color-plum-900: #831843;
+    --color-plum-950: #500724;
+
+    --color-accent: var(--color-teal-400);
+    --color-accent-content: var(--color-teal-600);
+    --color-accent-foreground: var(--color-teal-900);
+
+    .player-not-turn { background-color: var(--color-teal-900); border-color: var(--color-teal-900); }
+    .player-current-turn { background-color: var(--color-teal-400); border-color: var(--color-teal-900); color: var(--color-turn-indicator); }
+    .monster-not-turn { background-color: var(--color-plum-900); border-color: var(--color-plum-900); }
+    .monster-current-turn { background-color: var(--color-plum-400); border-color: var(--color-plum-900); color: var(--color-turn-indicator); }
+}
+
+/* Dark mode overrides (adjust for each theme as needed) */
 @layer theme {
     .dark {
-        --color-accent: var(--color-havelock-blue-400);
+        /* Default dark accent */
+        --color-accent: var(--color-havelock-blue-400); /* Keep as default or pick one */
         --color-accent-content: var(--color-havelock-blue-600);
         --color-accent-foreground: var(--color-havelock-blue-950);
     }
-}
-
-@layer base {
-
-    *,
-    ::after,
-    ::before,
-    ::backdrop,
-    ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+    html[data-theme="earthen-arcane"].dark {
+        --color-accent: var(--color-emerald-400);
+        --color-accent-content: var(--color-emerald-600);
+        --color-accent-foreground: var(--color-emerald-950);
+    }
+    html[data-theme="heroic-fiery"].dark {
+        --color-accent: var(--color-azure-400);
+        --color-accent-content: var(--color-azure-600);
+        --color-accent-foreground: var(--color-azure-950);
+    }
+    html[data-theme="mystic-verdant"].dark {
+        --color-accent: var(--color-teal-400);
+        --color-accent-content: var(--color-teal-600);
+        --color-accent-foreground: var(--color-teal-950);
     }
 }
 
-[data-flux-field] {
-    @apply grid gap-2;
+/* Base styling from your original (ensure these use generic Tailwind classes or your theme variables) */
+@layer base {
+    *, ::after, ::before, ::backdrop, ::file-selector-button {
+        border-color: var(--color-zinc-200, currentColor); /* Use zinc for consistency */
+    }
 }
 
-[data-flux-label] {
-    @apply  !mb-0 !leading-tight;
-}
-
+[data-flux-field] { @apply grid gap-2; }
+[data-flux-label] { @apply  !mb-0 !leading-tight; }
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
-    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-zinc-900; /* Use zinc for ring-offset-color */
 }
 
-#encounter-image {
-    /* max-height: 400px; */ /* <-- Comment out or remove this line */
-    /* width: auto; */ /* Removed as it's often default or better handled by Tailwind width classes in the template */
-    @apply rounded-lg shadow-md;
-}
+#encounter-image { @apply rounded-lg shadow-md; }
 
-/* Player - Not Current Turn */
-.player-not-turn {
-    background-color: var(--color-havelock-blue-900);
-    border: 1px solid var(--color-havelock-blue-900);
-}
-
-/* Player - Current Turn */
-.player-current-turn {
-    background-color: var(--color-havelock-blue-400);
-    border: 1px solid var(--color-havelock-blue-900);
-    color: #aa2222;
-}
-
-/* Monster - Not Current Turn */
-.monster-not-turn {
-    background-color: var(--color-fuchsia-pink-900);
-    border: 1px solid var(--color-fuchsia-pink-900);
-}
-
-/* Monster - Current Turn */
-.monster-current-turn {
-    background-color: var(--color-fuchsia-pink-400);
-    border: 1px solid var(--color-fuchsia-pink-900);
-    color: #aa2222;
-}
+/* NOTE: Player/Monster turn classes are now defined INSIDE each theme block */
+/* This means you'd remove the global definitions at the bottom of your original CSS */
 
 /* Hide the number input arrows in Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
@@ -130,4 +226,4 @@ input::-webkit-inner-spin-button {
 /* Hide the number input arrows in Firefox */
 input[type=number] {
     -moz-appearance: textfield;
-}
+}}
