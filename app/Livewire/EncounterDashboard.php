@@ -29,7 +29,7 @@ class EncounterDashboard extends Component
 		if ($this->encounter->selectedCampaignImage && $this->encounter->selectedCampaignImage->image_path) {
 			$this->imageUrl = $this->encounter->selectedCampaignImage->image_url; // Use the accessor
 		} else {
-			$this->imageUrl = '/images/placeholder.jpg';
+			$this->imageUrl = '/images/monster_image.png';
 		}
 	}
 
