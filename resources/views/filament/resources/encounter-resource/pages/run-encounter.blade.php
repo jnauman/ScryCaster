@@ -93,7 +93,8 @@
 										<input type="number"
 											   id="initiative-{{ $combatantInput['key'] }}"
 											   wire:model.defer="initiativeInputs.{{ $index }}.initiative"
-											   class="w-24 bg-gray-700 text-white border border-gray-600 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500"
+											   style="background-color: var(--color-havelock-blue-900);"
+											   class="w-24 text-white border border-gray-600 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500"
 											   placeholder="Roll">
 									</div>
 								@empty
