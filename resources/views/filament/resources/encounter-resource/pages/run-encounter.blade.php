@@ -93,7 +93,8 @@
 										<input type="number"
 											   id="initiative-{{ $combatantInput['key'] }}"
 											   wire:model.defer="initiativeInputs.{{ $index }}.initiative"
-											   class="w-24 bg-gray-700 text-white border border-gray-600 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500"
+											   style="background-color: var(--color-havelock-blue-900);"
+											   class="w-24 text-white border border-gray-600 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500"
 											   placeholder="Roll">
 									</div>
 								@empty
@@ -189,7 +190,8 @@
 												   wire:key="hp-input-{{ $combatant['id'] }}"
 												   value="{{ $combatant['current_health'] }}"
 												   wire:change="updateMonsterHp({{ $combatant['id'] }}, $event.target.value)"
-												   class="w-20 rounded-md border-2 border-gray-600 bg-gray-700 p-1
+												   style="background-color: var(--color-havelock-blue-900);"
+												   class="w-20 rounded-md border-2 border-gray-600 p-1
                                                text-center text-lg font-bold text-white
                                                transition-colors duration-200 ease-in-out
                                                focus:border-yellow-400 focus:outline-none focus:ring-0"

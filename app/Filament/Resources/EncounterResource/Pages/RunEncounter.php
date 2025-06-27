@@ -41,7 +41,7 @@ class RunEncounter extends ViewRecord
 	 */
     public function booted(): void
 {
-    Log::debug('RunEncounter booted. Encounter ID: ' . $this->record->id . ', Current Turn: ' . $this->record->current_turn);
+    Log::debug('RunEncounter booted. Encounter ID: ' . $this->record->id . ', Current Turn: ' . $this->record->current_turn . ', Current Round: ' . $this->record->current_round);
 	$this->record->loadMissing(['playerCharacters', 'monsterInstances.monster']);
 
 	$hasPlayers = $this->record->playerCharacters()->exists();
@@ -49,13 +49,21 @@ class RunEncounter extends ViewRecord
 
     Log::debug('Has Players: ' . ($hasPlayers ? 'Yes' : 'No') . ', Has Monsters: ' . ($hasMonsters ? 'Yes' : 'No'));
 
-	// This is the same logic as before, but now in the correct place.
-	if (($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
-        Log::debug('Condition met: Showing initiative modal.');
+    // Check for the session flash variable to trigger the modal.
+    // Use pull() to get the value and then immediately remove it, ensuring it's a one-time trigger per navigation.
+    $shouldTriggerModalFromNavigation = session()->pull('trigger_initiative_modal', false);
+    Log::debug('Session trigger_initiative_modal pulled: ' . ($shouldTriggerModalFromNavigation ? 'true' : 'false'));
+
+	// Show initiative modal if:
+    // 1. Navigated via "Start Encounter" action (session flash is true)
+    // 2. AND Encounter is not started (current_turn is null or 0)
+    // 3. AND There are combatants
+	if ($shouldTriggerModalFromNavigation && ($this->record->current_turn === null || $this->record->current_turn === 0) && ($hasPlayers || $hasMonsters)) {
+        Log::debug('Condition met for showing initiative modal: Triggered by navigation and encounter is new.');
 		$this->showInitiativeModal = true;
 		$this->prepareInitiativeInputs();
 	} else {
-        Log::debug('Condition not met or encounter already started. Loading combatants for view. Current turn: ' . $this->record->current_turn);
+        Log::debug('Condition not met for initiative modal. Loading combatants for view. Trigger: ' . ($shouldTriggerModalFromNavigation ? 'Yes' : 'No') . ', Current turn: ' . $this->record->current_turn . ', Current round: ' . $this->record->current_round);
 		$this->loadCombatantsForView();
 	}
 }
