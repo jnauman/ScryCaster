@@ -2,22 +2,15 @@
 
 use Livewire\Volt\Component;
 
-new class extends Component {
-    //
-}; ?>
-
-<?php
-
-use Livewire\Volt\Component;
-
-new class extends Component {
+new class extends Component
+{
     //
 }; ?>
 
 <div class="flex flex-col items-start">
     @include('partials.settings-heading')
 
-    <x-settings.layout :heading="__('Appearance')" :subheading=" __('Update the appearance settings for your account')">
+    <x-settings.layout :heading="__('Appearance')" :subheading="__('Update the appearance settings for your account')">
         <div class="space-y-6">
             <div>
                 <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100">{{ __('Mode') }}</h3>
