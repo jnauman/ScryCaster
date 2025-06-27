@@ -21,17 +21,16 @@ class MonsterImportActionTest extends TestCase
         parent::setUp();
         Storage::fake('livewire-tmp'); // Fake the disk Livewire uses for temporary uploads
         // Create a user and act as that user.
-        // Ensure the user model has 'is_admin' or adapt to your auth system.
-        $user = User::factory()->create([
-            // Add 'is_admin' => true if your User model/factory supports it and it's needed for access.
-            // e.g., 'is_admin' => true,
-        ]);
+        $user = User::factory()->create();
         $this->actingAs($user);
+        // Set the current panel for the test
+        \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('app'));
     }
 
     public function test_monster_list_page_contains_bulk_import_action_and_modal()
     {
-        $this->get(MonsterResource::getUrl('index'))
+        // Pass the panel to getUrl to be explicit
+        $this->get(MonsterResource::getUrl('index', panel: 'app'))
             ->assertSuccessful()
             ->assertSee('Bulk Import Monsters'); // Check if the button text is present
     }
