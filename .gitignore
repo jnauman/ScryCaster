@@ -33,3 +33,5 @@ Homestead.json
 auth.json
 *.lock
 package-lock.json
+/public/js/
+/public/css/
