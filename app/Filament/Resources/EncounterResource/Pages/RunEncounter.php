@@ -246,10 +246,29 @@ class RunEncounter extends ViewRecord
 			];
 		});
 
-		$this->combatantsForView = $playerCharacters->merge($monsterInstances)
-													->sortBy('order')
-													->values()
-													->all();
+		$allCombatants = $playerCharacters->merge($monsterInstances)
+										 ->sortBy('order')
+										 ->values();
+
+		$currentTurnOrder = $this->record->current_turn;
+
+		if ($currentTurnOrder !== null && $currentTurnOrder > 0 && !$allCombatants->isEmpty()) {
+			$currentIndex = $allCombatants->search(function ($combatant) use ($currentTurnOrder) {
+				return $combatant['order'] == $currentTurnOrder;
+			});
+
+			if ($currentIndex !== false) {
+				$currentCombatant = $allCombatants->pull($currentIndex);
+				$reorderedCombatants = collect([$currentCombatant])->merge($allCombatants);
+				$this->combatantsForView = $reorderedCombatants->values()->all();
+			} else {
+				// Current turn points to a non-existent combatant, fall back to default order
+				$this->combatantsForView = $allCombatants->all();
+			}
+		} else {
+			// Encounter not started or no combatants, use default order
+			$this->combatantsForView = $allCombatants->all();
+		}
 	}
 
     public function showMonsterModal(int $monsterInstanceId): void
@@ -311,6 +330,7 @@ class RunEncounter extends ViewRecord
 
 		$this->record->save();
 		event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
+		$this->loadCombatantsForView(); // Explicitly reload and reorder combatants for the view
 	}
 
 	protected function getHeaderActions(): array

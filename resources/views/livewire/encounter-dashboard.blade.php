@@ -67,46 +67,12 @@
 
 @push('scripts')
 <script>
-    document.addEventListener('livewire:load', function () {
-        const combatantList = document.getElementById('encounter-{{ $encounter->id }}-combatants');
-
-        if (combatantList) {
-            const observer = new MutationObserver(mutations => {
-                for (let mutation of mutations) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        const targetElement = mutation.target;
-                        // Check if the element is the current turn by looking for a specific class
-                        // Using 'border-yellow-400' as it's uniquely applied to the current turn.
-                        if (targetElement.classList.contains('border-yellow-400')) {
-                            targetElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            break; // Found the target, no need to check other mutations
-                        }
-                    } else if (mutation.type === 'childList') {
-                        // If children are added/removed, check for the current turn item among the new/existing children
-                        const currentTurnElement = combatantList.querySelector('.border-yellow-400');
-                        if (currentTurnElement) {
-                            currentTurnElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        }
-                    }
-                }
-            });
-
-            observer.observe(combatantList, {
-                childList: true, // Watch for direct children being added or removed
-                subtree: true,   // Watch for changes in all descendants of combatantList
-                attributes: true, // Watch for attribute changes
-                attributeFilter: ['class'] // Specifically watch for changes to the 'class' attribute
-            });
-
-            // Initial scroll to current turn on page load / component load
-            const initialCurrentTurnElement = combatantList.querySelector('.border-yellow-400');
-            if (initialCurrentTurnElement) {
-                // A slight delay can sometimes help ensure the layout is fully stable
-                setTimeout(() => {
-                    initialCurrentTurnElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }, 100);
-            }
-        }
-    });
+    // Scrolling logic removed as current turn combatant is now always at the top
+    // for the GM view (RunEncounter.php).
+    // This specific view (encounter-dashboard.blade.php) is likely for player view
+    // and might have its own scrolling needs if the list is long, but the original
+    // request was about the GM view (scrycaster.app/admin/encounters/3/run)
+    // and re-ordering combatants there.
+    // If this dashboard also needs specific scrolling, it would be a separate consideration.
 </script>
 @endpush
