@@ -330,6 +330,7 @@ class RunEncounter extends ViewRecord
 
 		$this->record->save();
 		event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
+		$this->loadCombatantsForView(); // Explicitly reload and reorder combatants for the view
 	}
 
 	protected function getHeaderActions(): array
