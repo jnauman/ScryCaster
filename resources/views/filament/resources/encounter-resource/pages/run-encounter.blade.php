@@ -7,11 +7,18 @@
 			<p class="text-lg mb-2">Round: <span class="font-semibold">{{ $record->current_round ?? 0 }}</span></p>
 			<p class="text-lg mb-2">Turn: <span class="font-semibold">{{ $record->current_turn ?? 'Not Started' }}</span></p>
 
-            {{-- Manual Initiative Button --}}
-            <div class="my-4">
+            {{-- Action Buttons Container --}}
+            <div class="my-4 flex space-x-3">
                 <x-filament::button wire:click="displayInitiativeModal" icon="heroicon-o-play">
                     Roll Initiative!
                 </x-filament::button>
+
+                {{-- Next Turn Button --}}
+                <button wire:click="nextTurn"
+                        class="bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50"
+                        @if(empty($this->combatantsForView) || $record->current_turn === null || $record->current_turn === 0) disabled @endif>
+                    Next Turn
+                </button>
             </div>
 
 			{{-- Monster Detail Modal --}}
@@ -224,12 +231,6 @@
 					</ul>
 				</div>
 
-				{{-- Next Turn Button --}}
-				<button wire:click="nextTurn"
-						class="mt-6 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50"
-						@if(empty($this->combatantsForView)) disabled @endif>
-					Next Turn
-				</button>
 			@elseif (!$this->showInitiativeModal && empty($this->combatantsForView))
 				<p class="text-gray-400">No combatants in this encounter yet, or initiative has not been set.</p>
 				<p class="text-gray-500 text-sm">If you've added combatants, try refreshing. The initiative modal should appear if needed.</p>
