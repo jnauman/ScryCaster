@@ -31,7 +31,7 @@ yarn.lock # If using Yarn, this should generally be COMMITTED
 
 # Laravel Specific & Published Assets
 /public/hot # Used by Vite/Mix for hot module reloading during local dev
-/public/storage # Symlink for user-uploaded files (actual files in storage/app/public)
+/public/storage/ # Symlink for user-uploaded files (actual files in storage/app/public)
 
 # Filament Specific Published Assets (generated, should not be committed)
 /public/css/filament/**
