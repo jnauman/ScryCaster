@@ -250,25 +250,7 @@ class RunEncounter extends ViewRecord
 										 ->sortBy('order')
 										 ->values();
 
-		$currentTurnOrder = $this->record->current_turn;
-
-		if ($currentTurnOrder !== null && $currentTurnOrder > 0 && !$allCombatants->isEmpty()) {
-			$currentIndex = $allCombatants->search(function ($combatant) use ($currentTurnOrder) {
-				return $combatant['order'] == $currentTurnOrder;
-			});
-
-			if ($currentIndex !== false) {
-				$currentCombatant = $allCombatants->pull($currentIndex);
-				$reorderedCombatants = collect([$currentCombatant])->merge($allCombatants);
-				$this->combatantsForView = $reorderedCombatants->values()->all();
-			} else {
-				// Current turn points to a non-existent combatant, fall back to default order
-				$this->combatantsForView = $allCombatants->all();
-			}
-		} else {
-			// Encounter not started or no combatants, use default order
-			$this->combatantsForView = $allCombatants->all();
-		}
+		$this->combatantsForView = $allCombatants->all();
 	}
 
     public function showMonsterModal(int $monsterInstanceId): void
