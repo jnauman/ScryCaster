@@ -1,8 +1,8 @@
 # Compiled and Generated Directories
 /vendor/
 /node_modules/
-/public/build # For Vite builds (Laravel 10+)
-/bootstrap/cache/ # Laravel's compiled/cached services and routes
+/public/build/**
+/bootstrap/cache/
 /storage/*.key # Ignore storage encryption keys
 
 # Environment Configuration & Logs
@@ -38,7 +38,9 @@ yarn.lock # If using Yarn, this should generally be COMMITTED
 /public/js/filament/**
 /public/fonts/filament/**
 /public/vendor/filament/** # Catch all for any Filament assets published under public/vendor/filament/
-
+# Common compiled asset directories that Vite handles
+/public/css/**
+/public/js/**
 # Other Specific Files
 auth.json # Composer auth credentials
 Homestead.yaml # Laravel Homestead config
