@@ -1,37 +1,56 @@
+# Compiled and Generated Directories
 /vendor/
-node_modules/
+/node_modules/
+/public/build # For Vite builds (Laravel 10+)
+/bootstrap/cache/ # Laravel's compiled/cached services and routes
+/storage/*.key # Ignore storage encryption keys
+
+# Environment Configuration & Logs
+.env
+.env.backup
+.env.production # General placeholder for specific environment files
+error_log # General PHP error logs
+*.log # Catch any other log files
 npm-debug.log
 yarn-error.log
 
-# Laravel 4 specific
-bootstrap/compiled.php
-app/storage/
+# IDE and OS Specific Files
+.idea/ # PhpStorm/IntelliJ
+.vscode/ # VS Code
+.DS_Store # macOS specific
+Thumbs.db # Windows specific
+.phpunit.result.cache # PHPUnit test results cache
+.phpactor.json # If you're using PHPactor language server, this is often temporary/cache
 
-# Laravel 5 & Lumen specific
-public/storage
-public/hot
+# Dependencies Lock Files
+# IMPORTANT: composer.lock should usually be COMMITTED to ensure consistent dependency versions.
+# If you explicitly want to ignore it (e.g., in a very early stage of a library), uncomment the line below.
+# composer.lock
+package-lock.json # For NPM, this should generally be COMMITTED for consistency
+yarn.lock # If using Yarn, this should generally be COMMITTED
 
-# Laravel 5 & Lumen specific with changed public path
-public_html/storage
-public_html/hot
+# Laravel Specific & Published Assets
+/public/hot # Used by Vite/Mix for hot module reloading during local dev
+/public/storage # Symlink for user-uploaded files (actual files in storage/app/public)
 
-storage/*.key
-.env
-Homestead.yaml
-Homestead.json
-/.vagrant
-.phpunit.result.cache
+# Filament Specific Published Assets (generated, should not be committed)
+/public/css/filament/**
+/public/js/filament/**
+/public/fonts/filament/**
+/public/vendor/filament/** # Catch all for any Filament assets published under public/vendor/filament/
 
-/public/build
-/public/css/*.css
-/public/js/*.js
+# Other Specific Files
+auth.json # Composer auth credentials
+Homestead.yaml # Laravel Homestead config
+Homestead.json # Laravel Homestead config
+/.vagrant # Vagrant-related files
 
-/storage/pail
-.env.backup
-.env.production
-.phpactor.json
-auth.json
-*.lock
-package-lock.json
-/public/js/
-/public/css/
+# Old Laravel 4/5 specific entries - REMOVED as they are not relevant for Laravel 12:
+# bootstrap/compiled.php
+# app/storage/
+# public/css/*.css (Vite handles this with /public/build)
+# public/js/*.js (Vite handles this with /public/build)
+# /storage/pail (Uncommon, removed unless you have a specific custom package using this exact path)
+# public_html/storage (If your public path is truly public_html, adjust /public/storage above)
+# public_html/hot (If your public path is truly public_html, adjust /public/hot above)
+# *.lock (Too broad, specifically list lock files you want to ignore)
