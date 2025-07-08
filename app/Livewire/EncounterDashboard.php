@@ -14,6 +14,7 @@ class EncounterDashboard extends Component
 	public array $combatants = [];
 	public ?string $imageUrl;
 	public bool $sidebarCollapsed = false;
+	public array $expandedMonsterInstances = [];
 
 	/**
 	 * Mounts the component and loads the initial encounter data.
@@ -30,6 +31,16 @@ class EncounterDashboard extends Component
 			$this->imageUrl = $this->encounter->selectedCampaignImage->image_url; // Use the accessor
 		} else {
 			$this->imageUrl = '/images/monster_image.png';
+		}
+	}
+
+	public function toggleMonsterDetail(int $monsterInstanceId): void
+	{
+		if (isset($this->expandedMonsterInstances[$monsterInstanceId])) {
+			$this->expandedMonsterInstances[$monsterInstanceId] = !$this->expandedMonsterInstances[$monsterInstanceId];
+		} else {
+			// If for some reason it's not set, initialize it to true (expanded)
+			$this->expandedMonsterInstances[$monsterInstanceId] = true;
 		}
 	}
 
@@ -65,20 +76,46 @@ class EncounterDashboard extends Component
 		$monsterInstances = $this->encounter->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) use ($currentTurn) {
 			$isCurrentTurn = $mi->order == $currentTurn;
 
+			// Initialize or update expanded state
+			// If it's the current turn, it should be expanded. Otherwise, keep its current state or default to false.
+			// This will be further refined in handleTurnChange for more dynamic updates.
+			if ($isCurrentTurn) {
+				$this->expandedMonsterInstances[$mi->id] = true;
+			} elseif (!isset($this->expandedMonsterInstances[$mi->id])) {
+				$this->expandedMonsterInstances[$mi->id] = false;
+			}
+
 			return [
 				'id' => $mi->id,
 				'type' => 'monster_instance',
 				'name' => $mi->monster->name,
-				//'ac' => $mi->monster->ac,
 				'order' => $mi->order,
-				// 'original_model' => $mi, // Removed as it might cause issues with Livewire state and isn't used in blade
 				'image' => $mi->monster->image ? Storage::disk('public')->url($mi->monster->image) : '/images/monster_image.png',
-				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'monster-current-turn' : 'monster-not-turn',
+				// Monster Details
+				'ac' => $mi->monster->ac,
+				'armor_type' => $mi->monster->armor_type,
+				'current_health' => $mi->current_health,
+				'max_health' => $mi->max_health ?: $mi->monster->max_health, // Instance max_health takes precedence
+				'traits' => $mi->monster->traits,
+				'attacks' => $mi->monster->attacks, // Assuming this is a string or simple array suitable for display
+				'movement' => $mi->monster->movement,
+				'strength' => $mi->monster->strength,
+				'dexterity' => $mi->monster->dexterity,
+				'constitution' => $mi->monster->constitution,
+				'intelligence' => $mi->monster->intelligence,
+				'wisdom' => $mi->monster->wisdom,
+				'charisma' => $mi->monster->charisma,
+				'alignment' => $mi->monster->alignment,
+				'level' => $mi->monster->level,
+				'description' => $mi->monster->description, // Added description
 			];
 		});
 
 		$this->combatants = $playerCharacters->merge($monsterInstances)->sortBy('order')->values()->all();
+		// Ensure expandedMonsterInstances array only contains keys for current combatants
+		$currentMonsterInstanceIds = $monsterInstances->pluck('id')->toArray();
+		$this->expandedMonsterInstances = array_intersect_key($this->expandedMonsterInstances, array_flip($currentMonsterInstanceIds));
 	}
 
 	/**
@@ -116,7 +153,21 @@ class EncounterDashboard extends Component
             $this->encounter->refresh();
 
 			// 2. Reload the combatants list, which will recalculate the CSS classes.
-			$this->loadCombatants();
+			$this->loadCombatants(); // This already sets the current turn monster to expanded
+
+			// 3. Explicitly manage expanded states based on the new turn
+			$newCurrentTurnOrder = $payload['currentTurn'];
+			foreach ($this->combatants as $combatant) {
+				if ($combatant['type'] === 'monster_instance') {
+					if ($combatant['order'] == $newCurrentTurnOrder) {
+						$this->expandedMonsterInstances[$combatant['id']] = true;
+					} else {
+						// Only collapse if not manually kept open by a different logic
+						// For now, simple: collapse if not current turn.
+						$this->expandedMonsterInstances[$combatant['id']] = false;
+					}
+				}
+			}
 		}
 	}
 

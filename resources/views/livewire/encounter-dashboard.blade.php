@@ -33,16 +33,104 @@
                                             - {{ $combatant['title'] }}
                                         @endif
                                     </span>
-                                    <span class="text-xs text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)]">({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})</span>
+                                    <span class="text-xs text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)]">({{ $combatant['type'] === 'player' ? 'Player' : ($combatant['type'] === 'monster_instance' ? 'Monster' : 'Unknown') }})</span>
+                                </div>
 
-                                    @if ($combatant['type'] === 'player')
-                                        <div class="text-sm mt-1 text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-300)]">
-                                            Ancestry: <span class="font-semibold">{{ $combatant['ancestry'] ?? 'N/A' }}</span><br>
-                                            Class: <span class="font-semibold">{{ $combatant['class'] ?? 'N/A' }}</span>
+                                {{-- Toggle Icon for Monster Instances --}}
+                                @if ($combatant['type'] === 'monster_instance')
+                                    <div class="ml-auto pr-2">
+                                        <button wire:click="toggleMonsterDetail({{ $combatant['id'] }})" class="text-[var(--color-accent)] hover:text-[var(--color-accent-hover)] transition-colors">
+                                            @if ($expandedMonsterInstances[$combatant['id']] ?? false)
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                                                </svg>
+                                            @else
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                                </svg>
+                                            @endif
+                                        </button>
+                                    </div>
+                                @endif
+                            </li>
+
+                            {{-- Collapsible Monster Details --}}
+                            @if ($combatant['type'] === 'monster_instance' && ($expandedMonsterInstances[$combatant['id']] ?? false))
+                            <li class="bg-[var(--color-zinc-50)] dark:bg-[var(--color-zinc-750)] p-3 rounded-b-lg mb-2 shadow-inner" wire:key="monster-detail-{{ $combatant['id'] }}">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-[var(--color-zinc-700)] dark:text-[var(--color-zinc-300)]">
+                                    <div><strong>AC:</strong> {{ $combatant['ac'] ?? 'N/A' }} {{ $combatant['armor_type'] ? '(' . $combatant['armor_type'] . ')' : '' }}</div>
+                                    <div><strong>HP:</strong> {{ $combatant['current_health'] ?? 'N/A' }} / {{ $combatant['max_health'] ?? 'N/A' }}</div>
+                                    <div><strong>Level:</strong> {{ $combatant['level'] ?? 'N/A' }}</div>
+                                    <div><strong>Alignment:</strong> {{ $combatant['alignment'] ?? 'N/A' }}</div>
+                                    <div class="md:col-span-2"><strong>Movement:</strong> {{ $combatant['movement'] ?? 'N/A' }}</div>
+
+                                    @if(!empty($combatant['traits']))
+                                        <div class="md:col-span-2">
+                                            <strong>Traits:</strong>
+                                            @if(is_array($combatant['traits']))
+                                                {{ implode(', ', $combatant['traits']) }}
+                                            @else
+                                                {{ $combatant['traits'] }}
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                    <div class="md:col-span-2">
+                                        <strong>Stats:</strong>
+                                        Str: {{ $combatant['strength'] ?? 'N/A' }} |
+                                        Dex: {{ $combatant['dexterity'] ?? 'N/A' }} |
+                                        Con: {{ $combatant['constitution'] ?? 'N/A' }} |
+                                        Int: {{ $combatant['intelligence'] ?? 'N/A' }} |
+                                        Wis: {{ $combatant['wisdom'] ?? 'N/A' }} |
+                                        Cha: {{ $combatant['charisma'] ?? 'N/A' }}
+                                    </div>
+
+                                    @if(!empty($combatant['description']))
+                                        <div class="md:col-span-2 mt-1">
+                                            <p class="text-xs italic">{{ $combatant['description'] }}</p>
+                                        </div>
+                                    @endif
+
+                                    @if (!empty($combatant['attacks']))
+                                        <div class="md:col-span-2 mt-1">
+                                            <strong>Attacks:</strong>
+                                            {{-- Assuming attacks might be a JSON string or array --}}
+                                            @if (is_array($combatant['attacks']))
+                                                <ul class="list-disc list-inside ml-2">
+                                                    @foreach ($combatant['attacks'] as $attackName => $attackDetails)
+                                                        <li>
+                                                            @if(is_string($attackName) && !is_array($attackDetails))
+                                                                {{ $attackName }}: {{ $attackDetails }}
+                                                            @elseif(is_string($attackName))
+                                                                {{ $attackName }}
+                                                                @if(is_array($attackDetails))
+                                                                    ({{ isset($attackDetails['to_hit']) ? 'To Hit: '.$attackDetails['to_hit'].', ' : '' }}{{ isset($attackDetails['damage']) ? 'Dmg: '.$attackDetails['damage'] : '' }})
+                                                                @endif
+                                                            @else
+                                                                {{ $attackDetails }}
+                                                            @endif
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            @else
+                                                <p>{{ $combatant['attacks'] }}</p>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>
                             </li>
+                            @endif
+
+
+                            {{-- Player Details (original location) --}}
+                            @if ($combatant['type'] === 'player')
+                            <li class="bg-transparent p-0 -mt-2"> {{-- Adjust list item for player details to keep them visually associated --}}
+                                <div class="pl-[calc(0.75rem+48px+0.75rem)] pb-2 text-sm text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-300)]">
+                                    Ancestry: <span class="font-semibold">{{ $combatant['ancestry'] ?? 'N/A' }}</span><br>
+                                    Class: <span class="font-semibold">{{ $combatant['class'] ?? 'N/A' }}</span>
+                                </div>
+                            </li>
+                            @endif
                         @empty
                             <li class="p-4 text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)] text-center">No combatants in this encounter yet. Time to add some!</li>
                         @endforelse
