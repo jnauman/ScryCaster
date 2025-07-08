@@ -32,8 +32,7 @@ class RunEncounter extends ViewRecord
     public bool $showInitiativeModal = false;
     public array $initiativeInputs = [];
     public array $combatantsForView = [];
-    public bool $showMonsterDetailModal = false;
-    public ?array $selectedMonsterForModal = null;
+    public array $expandedMonsterInstances = []; // Added for inline collapsible details
 
     /**
 	 * Use the booted() lifecycle hook for setup logic.
@@ -166,7 +165,18 @@ class RunEncounter extends ViewRecord
         }
 
         $this->record->save();
-        $this->loadCombatantsForView(); // Refresh the view
+        $this->loadCombatantsForView(); // Refresh the view, which also re-initializes/cleans expandedMonsterInstances
+
+        // Explicitly manage expanded states after removal, similar to nextTurn
+        $newCurrentTurnOrder = $this->record->current_turn;
+        $updatedExpandedStates = [];
+        foreach ($this->combatantsForView as $combatant) {
+            if ($combatant['type'] === 'monster_instance') {
+                $updatedExpandedStates[$combatant['id']] = ($combatant['order'] == $newCurrentTurnOrder);
+            }
+        }
+        $this->expandedMonsterInstances = $updatedExpandedStates;
+
 
         Notification::make()->title('Monster instance removed successfully.')->success()->send();
         event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
@@ -242,7 +252,10 @@ class RunEncounter extends ViewRecord
 				'intelligence' => $mi->monster->intelligence,
 				'wisdom' => $mi->monster->wisdom,
 				'charisma' => $mi->monster->charisma,
-				'original_model' => $mi, // Keep original model if needed elsewhere
+                'description' => $mi->monster->description,
+                'traits' => $mi->monster->traits, // Ensure this is an array or string as expected by blade
+                'attacks' => $mi->monster->attacks, // Ensure this is an array or string as expected by blade
+				'original_model' => $mi,
 			];
 		});
 
@@ -251,41 +264,43 @@ class RunEncounter extends ViewRecord
 										 ->values();
 
 		$this->combatantsForView = $allCombatants->all();
+
+        // Initialize or update expanded states
+        $currentTurnOrder = $this->record->current_turn;
+        $activeMonsterInstanceIds = $monsterInstances->pluck('id')->toArray();
+
+        // Preserve existing states for monsters still in combat
+        $currentExpandedStates = array_intersect_key($this->expandedMonsterInstances, array_flip($activeMonsterInstanceIds));
+
+        foreach ($activeMonsterInstanceIds as $id) {
+            if (!array_key_exists($id, $currentExpandedStates)) { // For new monsters or those not previously in expandedMonsterInstances
+                $combatant = $allCombatants->firstWhere('id', $id); // Find the combatant data
+                if ($combatant && $combatant['type'] === 'monster_instance') {
+                    // Default to expanded if it's the current turn, otherwise collapsed.
+                    $currentExpandedStates[$id] = ($combatant['order'] == $currentTurnOrder);
+                }
+            }
+            // If it's the active turn monster, ensure it's expanded (this might be redundant if nextTurn also handles it, but good for initial load)
+            $combatant = $allCombatants->firstWhere('id', $id);
+            if($combatant && $combatant['type'] === 'monster_instance' && $combatant['order'] == $currentTurnOrder) {
+                $currentExpandedStates[$id] = true;
+            }
+
+        }
+        $this->expandedMonsterInstances = $currentExpandedStates;
 	}
 
-    public function showMonsterModal(int $monsterInstanceId): void
+    public function toggleMonsterDetail(int $monsterInstanceId): void
     {
-        $monsterInstance = MonsterInstance::with('monster')->find($monsterInstanceId);
-
-        if (!$monsterInstance || !$monsterInstance->monster) {
-            Notification::make()->title('Monster data not found.')->danger()->send();
-            return;
+        if (isset($this->expandedMonsterInstances[$monsterInstanceId])) {
+            $this->expandedMonsterInstances[$monsterInstanceId] = !$this->expandedMonsterInstances[$monsterInstanceId];
+        } else {
+            // If not set, default to expanded. This case should ideally not be hit if initialized properly.
+            $this->expandedMonsterInstances[$monsterInstanceId] = true;
         }
-
-        $monster = $monsterInstance->monster;
-
-        $this->selectedMonsterForModal = [
-            'id' => $monsterInstance->id,
-            'name' => $monster->name,
-            'ac' => $monster->ac,
-            'movement' => $monster->movement,
-            'alignment' => $monster->alignment,
-            'strength' => $monster->strength,
-            'dexterity' => $monster->dexterity,
-            'constitution' => $monster->constitution,
-            'intelligence' => $monster->intelligence,
-            'wisdom' => $monster->wisdom,
-            'charisma' => $monster->charisma,
-            'description' => $monster->description,
-			'attacks' => $monster->attacks,
-            'traits' => $monster->traits,
-            'current_health' => $monsterInstance->current_health ?? $monster->max_health,
-            'max_health' => $monster->max_health,
-            // Add any other fields from Monster or MonsterInstance needed in the modal
-        ];
-
-        $this->showMonsterDetailModal = true;
     }
+
+    // Removed showMonsterModal method as it's being replaced by inline collapsible sections.
 
 	public function nextTurn()
 	{
@@ -312,7 +327,20 @@ class RunEncounter extends ViewRecord
 
 		$this->record->save();
 		event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
-		$this->loadCombatantsForView(); // Explicitly reload and reorder combatants for the view
+		$this->loadCombatantsForView(); // Reloads combatant data
+
+        // After combatants are loaded and view data is updated, set expanded states
+        $newCurrentTurnOrder = $this->record->current_turn;
+        foreach (array_keys($this->expandedMonsterInstances) as $monsterId) {
+            $combatant = collect($this->combatantsForView)->firstWhere('id', $monsterId);
+            if ($combatant && $combatant['type'] === 'monster_instance') {
+                 $this->expandedMonsterInstances[$monsterId] = ($combatant['order'] == $newCurrentTurnOrder);
+            } else {
+                // If monster somehow not found in combatantsForView (e.g. removed), ensure its state is cleaned.
+                // This should ideally be handled by loadCombatantsForView's array_intersect_key.
+                unset($this->expandedMonsterInstances[$monsterId]);
+            }
+        }
 	}
 
 	protected function getHeaderActions(): array
@@ -464,7 +492,21 @@ class RunEncounter extends ViewRecord
                     }
 
                     $this->record->save(); // Save encounter if current_turn/round changed by calculateOrder implicitly (though unlikely)
-                    $this->loadCombatantsForView(); // Refresh the view
+                    $this->loadCombatantsForView(); // Refresh the view, which also initializes expanded states for new monsters
+
+                    // Explicitly manage expanded states after adding, similar to nextTurn
+                    $newCurrentTurnOrder = $this->record->current_turn;
+                    $updatedExpandedStates = [];
+                    foreach ($this->combatantsForView as $combatant) {
+                        if ($combatant['type'] === 'monster_instance') {
+                            // If it's a new monster, it would have been initialized by loadCombatantsForView
+                            // This ensures all are set according to current turn
+                            $updatedExpandedStates[$combatant['id']] = ($combatant['order'] == $newCurrentTurnOrder);
+                        }
+                    }
+                     // Merge to ensure any existing states (though less likely here) are handled, then override based on turn
+                    $this->expandedMonsterInstances = array_merge($this->expandedMonsterInstances, $updatedExpandedStates);
+
 
                     Notification::make()->title( $data['quantity'] . ' ' . Str::plural($monster->name, $data['quantity']) . ' added.')->success()->send();
                     event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));

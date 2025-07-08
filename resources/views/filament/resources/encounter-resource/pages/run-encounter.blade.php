@@ -22,76 +22,7 @@
 				</x-filament::button>
 			</div>
 
-			{{-- Monster Detail Modal --}}
-			@if ($this->showMonsterDetailModal && $this->selectedMonsterForModal)
-				<div class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 p-4" wire:transition.opacity>
-					<div class="bg-gray-900 p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-						<div class="flex justify-between items-center mb-4">
-							<h2 class="text-2xl font-bold text-white">{{ $this->selectedMonsterForModal['name'] ?? 'Monster Details' }}</h2>
-							<button wire:click="$set('showMonsterDetailModal', false)" class="text-gray-400 hover:text-gray-200">
-								<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-							</button>
-						</div>
-						<div class="space-y-4 text-gray-300">
-							{{-- Core Info --}}
-							<div class="grid grid-cols-2 md:grid-cols-3 gap-4 p-3 bg-gray-800 rounded-md">
-								<div><strong>AC:</strong> {{ $this->selectedMonsterForModal['ac'] ?? 'N/A' }}</div>
-								<div><strong>Movement:</strong> {{ $this->selectedMonsterForModal['movement'] ?? 'N/A' }}</div>
-								<div><strong>Alignment:</strong> {{ Str::title($this->selectedMonsterForModal['alignment'] ?? 'N/A') }}</div>
-							</div>
-
-							{{-- Stats --}}
-							<div class="p-3 bg-gray-800 rounded-md">
-								<h4 class="text-md font-semibold text-gray-100 mb-2">Stats</h4>
-								<div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-									<span><strong>STR:</strong> {{ $this->selectedMonsterForModal['strength'] ?? 'N/A' }}</span>
-									<span><strong>DEX:</strong> {{ $this->selectedMonsterForModal['dexterity'] ?? 'N/A' }}</span>
-									<span><strong>CON:</strong> {{ $this->selectedMonsterForModal['constitution'] ?? 'N/A' }}</span>
-									<span><strong>INT:</strong> {{ $this->selectedMonsterForModal['intelligence'] ?? 'N/A' }}</span>
-									<span><strong>WIS:</strong> {{ $this->selectedMonsterForModal['wisdom'] ?? 'N/A' }}</span>
-									<span><strong>CHA:</strong> {{ $this->selectedMonsterForModal['charisma'] ?? 'N/A' }}</span>
-								</div>
-							</div>
-
-							{{-- Description --}}
-							@if (!empty($this->selectedMonsterForModal['description']))
-								<div class="p-3 bg-gray-800 rounded-md">
-									<h4 class="text-md font-semibold text-gray-100 mb-1">Description</h4>
-									<p class="text-sm whitespace-pre-wrap">{{ $this->selectedMonsterForModal['description'] }}</p>
-								</div>
-							@endif
-
-							{{-- Attacks --}}
-							@if (!empty($this->selectedMonsterForModal['attacks']))
-								<div class="p-3 bg-gray-800 rounded-md">
-									<h4 class="text-md font-semibold text-gray-100 mb-1">Attacks</h4>
-									<p class="text-sm whitespace-pre-wrap">{{ $this->selectedMonsterForModal['attacks'] }}</p>
-								</div>
-							@endif
-
-							{{-- Traits --}}
-							@if (!empty($this->selectedMonsterForModal['traits']))
-								<div class="p-3 bg-gray-800 rounded-md">
-									<h4 class="text-md font-semibold text-gray-100 mb-2">Traits</h4>
-									<ul class="space-y-2">
-										@foreach ($this->selectedMonsterForModal['traits'] as $trait)
-											<li class="text-sm">
-												<strong class="text-gray-200">{{ $trait['name'] ?? 'Unknown Trait' }}:</strong>
-												<span class="text-gray-400">{{ $trait['description'] ?? 'No description provided.' }}</span>
-											</li>
-										@endforeach
-									</ul>
-								</div>
-							@endif
-						</div>
-						<div class="mt-6 flex justify-end">
-							<button type="button" wire:click="$set('showMonsterDetailModal', false)" class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-md">
-								Close
-							</button>
-						</div>
-					</div>
-				</div>
-			@endif
+			{{-- Monster Detail Modal REMOVED --}}
 
 			{{-- Initiative Modal --}}
 			@if ($this->showInitiativeModal)
@@ -160,35 +91,49 @@
 								{{-- Added pr-24 to prevent text from overlapping with the absolute AC block --}}
 								<div class="flex-grow mb-3 sm:mb-0 w-full sm:w-auto pr-24">
 									<div class="flex items-center">
-                               <span class="font-bold text-xl {{ $isCurrentTurn ? 'text-white' : 'text-gray-100' }} mr-2 {{ $combatant['type'] === 'monster_instance' ? 'cursor-pointer hover:text-primary-400' : '' }}"
-									 @if ($combatant['type'] === 'monster_instance')
-										 wire:click="showMonsterModal({{ $combatant['id'] }})"
-                                  @endif
-                               >
-                                  {{ $combatant['name'] }}
-                               </span>
-										<span class="text-xs px-2 py-0.5 rounded-full {{ $combatant['type'] === 'player' ? 'bg-blue-600' : 'bg-red-600' }} text-white">
-                                  {{ Str::studly($combatant['type']) }}
-                               </span>
+                                       <span class="font-bold text-xl {{ $isCurrentTurn ? 'text-white' : 'text-gray-100' }} mr-2">
+                                          {{ $combatant['name'] }}
+                                       </span>
+										<span class="text-xs px-2 py-0.5 rounded-full {{ $combatant['type'] === 'player' ? 'bg-blue-600' : 'bg-red-600' }} text-white mr-2">
+                                          {{ Str::studly($combatant['type']) }}
+                                       </span>
+                                        {{-- Toggle Icon for Monster Instances --}}
+                                        @if ($combatant['type'] === 'monster_instance')
+                                            <button wire:click="toggleMonsterDetail({{ $combatant['id'] }})"
+                                                    class="text-gray-400 hover:text-yellow-400 transition-colors focus:outline-none"
+                                                    title="Toggle Details">
+                                                @if ($this->expandedMonsterInstances[$combatant['id']] ?? false)
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clip-rule="evenodd" />
+                                                    </svg>
+                                                @else
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                    </svg>
+                                                @endif
+                                            </button>
+                                        @endif
 									</div>
 									<div class="text-sm {{ $turnTextColor }}">
 										Turn Order: {{ $combatant['order'] }} | Initiative: {{ $combatant['initiative_roll'] ?? 'N/A' }}
 									</div>
 
-									{{-- GM Only Monster Stats --}}
+									{{-- GM Only Monster Stats (Movement & Core Stats) --}}
 									@if ($combatant['type'] === 'monster_instance')
-										<span class="flex items-center" title="Movement Speed">
-                                      <strong class="text-gray-400 font-medium">Movement: </strong>
-                                      {{ $combatant['movement'] ?? 'N/A' }}
-                               </span>
-										<div class="mt-3 pt-2 text-sm font-medium text-gray-200 grid grid-cols-3 md:grid-cols-3 gap-x-4 gap-y-2">
-											<span><strong class="text-gray-400 font-medium">STR:</strong> {{ $combatant['strength'] ?? 'N/A' }}</span>
-											<span><strong class="text-gray-400 font-medium">DEX:</strong> {{ $combatant['dexterity'] ?? 'N/A' }}</span>
-											<span><strong class="text-gray-400 font-medium">CON:</strong> {{ $combatant['constitution'] ?? 'N/A' }}</span>
-											<span><strong class="text-gray-400 font-medium">INT:</strong> {{ $combatant['intelligence'] ?? 'N/A' }}</span>
-											<span><strong class="text-gray-400 font-medium">WIS:</strong> {{ $combatant['wisdom'] ?? 'N/A' }}</span>
-											<span><strong class="text-gray-400 font-medium">CHA:</strong> {{ $combatant['charisma'] ?? 'N/A' }}</span>
-										</div>
+										<div class="mt-1"> {{-- Reduced top margin slightly --}}
+                                            <span class="flex items-center text-sm" title="Movement Speed">
+                                                <strong class="text-gray-400 font-medium mr-1">Movement:</strong>
+                                                {{ $combatant['movement'] ?? 'N/A' }}
+                                            </span>
+                                            <div class="mt-2 text-xs font-medium text-gray-200 grid grid-cols-3 md:grid-cols-3 gap-x-3 gap-y-1">
+                                                <span><strong class="text-gray-400 font-medium">STR:</strong> {{ $combatant['strength'] ?? 'N/A' }}</span>
+                                                <span><strong class="text-gray-400 font-medium">DEX:</strong> {{ $combatant['dexterity'] ?? 'N/A' }}</span>
+                                                <span><strong class="text-gray-400 font-medium">CON:</strong> {{ $combatant['constitution'] ?? 'N/A' }}</span>
+                                                <span><strong class="text-gray-400 font-medium">INT:</strong> {{ $combatant['intelligence'] ?? 'N/A' }}</span>
+                                                <span><strong class="text-gray-400 font-medium">WIS:</strong> {{ $combatant['wisdom'] ?? 'N/A' }}</span>
+                                                <span><strong class="text-gray-400 font-medium">CHA:</strong> {{ $combatant['charisma'] ?? 'N/A' }}</span>
+                                            </div>
+                                        </div>
 									@endif
 								</div>
 
@@ -212,7 +157,6 @@
                                                focus:border-yellow-400 focus:outline-none focus:ring-0"
 												   min="0"
 												   max="{{ $combatant['max_health'] }}">
-											{{--<span class="text-lg text-gray-400">/ {{ $combatant['max_health'] }}</span>--}}
 										</div>
 
 										{{-- Remove Monster Button --}}
@@ -227,6 +171,41 @@
 									</div>
 								@endif
 							</li>
+                            {{-- Collapsible Monster Details Section --}}
+                            @if ($combatant['type'] === 'monster_instance' && ($this->expandedMonsterInstances[$combatant['id']] ?? false))
+                                <li class="bg-gray-850 p-4 rounded-b-lg -mt-3 mb-3 shadow-inner ring-2 {{ $baseRingColor }}" wire:key="monster-detail-{{ $combatant['id'] }}">
+                                    <div class="space-y-3 text-sm text-gray-300">
+                                        @if (!empty($combatant['description']))
+                                            <div>
+                                                <h4 class="text-md font-semibold text-gray-100 mb-1">Description</h4>
+                                                <p class="text-xs whitespace-pre-wrap">{{ $combatant['description'] }}</p>
+                                            </div>
+                                        @endif
+
+                                        @if (!empty($combatant['traits']))
+                                            <div>
+                                                <h4 class="text-md font-semibold text-gray-100 mb-1">Traits</h4>
+                                                <ul class="space-y-1 list-disc list-inside pl-2">
+                                                    @foreach ($combatant['traits'] as $trait)
+                                                        <li>
+                                                            <strong class="text-gray-200">{{ $trait['name'] ?? 'Trait' }}:</strong>
+                                                            <span class="text-gray-400">{{ $trait['description'] ?? 'N/A' }}</span>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+
+                                        @if (!empty($combatant['attacks']))
+                                            <div>
+                                                <h4 class="text-md font-semibold text-gray-100 mb-1">Attacks</h4>
+                                                {{-- Assuming attacks is a string for now, adjust if it's structured data --}}
+                                                <p class="text-xs whitespace-pre-wrap">{{ is_array($combatant['attacks']) ? json_encode($combatant['attacks']) : $combatant['attacks'] }}</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </li>
+                            @endif
 							{{-- ★★★ END OF MODIFIED BLOCK ★★★ --}}
 						@endforeach
 					</ul>
