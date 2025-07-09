@@ -7,12 +7,12 @@
         @error('duration') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
     </div>
 
-    <div class="text-center mb-4">
-        <p class="text-5xl font-bold text-gray-900 dark:text-gray-100">
-            {{ gmdate("H:i:s", $remaining * 60) }}
+    <div class="text-center mb-4" x-data="torchTimerControls_{{ $encounter->id }}({{ $remaining ?? 0 }}, {{ $isRunning ? 'true' : 'false' }}, {{ $duration ?? 0 }})" x-init="initTimer()">
+        <p class="text-5xl font-bold text-gray-900 dark:text-gray-100" x-text="timeFormatted()">
+            {{ gmdate("H:i:s", ($remaining ?? 0) * 60) }}
         </p>
         <p class="text-sm text-gray-600 dark:text-gray-400">
-            Remaining Time (out of {{ gmdate("H:i:s", $duration * 60) }})
+            Remaining Time (out of <span x-text="durationFormated()">{{ gmdate("H:i:s", ($duration ?? 0) * 60) }}</span>)
         </p>
     </div>
 
@@ -54,4 +54,86 @@
     </div>
     {{-- Placeholder for server-side timer updates --}}
     {{-- <div wire:poll.1000ms="decrementTimeOnServer" style="display:none;"></div> --}}
+
+    @push('scripts')
+    <script>
+        function torchTimerControls_{{ $encounter->id }}(initialRemainingMinutes, initialIsRunning, initialDurationMinutes) {
+            return {
+                remainingSeconds: Math.max(0, initialRemainingMinutes * 60),
+                isRunning: initialIsRunning,
+                durationSeconds: Math.max(0, initialDurationMinutes * 60),
+                interval: null,
+
+                initTimer() {
+                    if (this.isRunning && this.remainingSeconds > 0) {
+                        this.startClientTimer();
+                    }
+
+                    this.$wire.on('torchTimerExternalUpdate', (eventData) => {
+                        console.log('Controls received torchTimerExternalUpdate:', eventData);
+                        this.durationSeconds = Math.max(0, eventData.duration * 60);
+                        this.remainingSeconds = Math.max(0, eventData.remaining * 60);
+                        this.isRunning = eventData.isRunning;
+                        if (this.isRunning && this.remainingSeconds > 0) {
+                            this.startClientTimer();
+                        } else {
+                            this.stopClientTimer();
+                        }
+                    });
+
+                    // Sync with server state when tab becomes visible, in case of drift
+                    // or if backend updates happened while tab was inactive.
+                    document.addEventListener("visibilitychange", () => {
+                        if (!document.hidden) {
+                            this.$wire.call('syncState');
+                        }
+                    });
+                },
+
+                startClientTimer() {
+                    if (this.interval) clearInterval(this.interval);
+                    if (!this.isRunning || this.remainingSeconds <= 0) return;
+
+                    this.interval = setInterval(() => {
+                        if (this.remainingSeconds > 0) {
+                            this.remainingSeconds--;
+                        } else {
+                            this.isRunning = false; // Visually stop
+                            this.stopClientTimer();
+                            // Optionally, notify Livewire component that timer reached zero client-side
+                            // this.$wire.call('clientTimerReachedZero');
+                        }
+                    }, 1000);
+                },
+
+                stopClientTimer() {
+                    if (this.interval) {
+                        clearInterval(this.interval);
+                        this.interval = null;
+                    }
+                },
+
+                timeFormatted() {
+                    if (this.remainingSeconds === null) return '00:00:00';
+                    const hours = Math.floor(this.remainingSeconds / 3600);
+                    const minutes = Math.floor((this.remainingSeconds % 3600) / 60);
+                    const seconds = this.remainingSeconds % 60;
+                    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                },
+                durationFormated() {
+                    if (this.durationSeconds === null) return '00:00:00';
+                    const hours = Math.floor(this.durationSeconds / 3600);
+                    const minutes = Math.floor((this.durationSeconds % 3600) / 60);
+                    const seconds = this.durationSeconds % 60;
+                    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                },
+
+                // Watch for changes from Livewire component's state (e.g., after a button click)
+                // This is implicitly handled by Livewire updating the bound initial values when the component re-renders.
+                // However, direct calls from Livewire might be more robust.
+                // We will use a Livewire event for this.
+            }
+        }
+    </script>
+    @endpush
 </div>

@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Encounter;
 use Livewire\Component;
+use Illuminate\Support\Facades\Log;
 
 class TorchTimerDisplay extends Component
 {
@@ -18,6 +19,7 @@ class TorchTimerDisplay extends Component
         $this->remaining = $encounter->torch_timer_remaining;
         $this->duration = $encounter->torch_timer_duration;
         $this->isRunning = $encounter->torch_timer_is_running ?? false;
+        Log::info("TorchTimerDisplay mounted for Encounter ID {$this->encounterId}: Duration={$this->duration}, Remaining={$this->remaining}, IsRunning={$this->isRunning}");
     }
 
     public function getListeners(): array
@@ -29,10 +31,18 @@ class TorchTimerDisplay extends Component
 
     public function handleTorchTimerUpdate(array $payload): void
     {
+        Log::info("TorchTimerDisplay received TorchTimerUpdated event for Encounter ID {$payload['encounterId']} with payload: " . json_encode($payload));
         if ($this->encounterId === $payload['encounterId']) {
             $this->remaining = $payload['remaining'];
             $this->duration = $payload['duration'];
             $this->isRunning = $payload['isRunning'];
+            Log::info("TorchTimerDisplay updated for Encounter ID {$this->encounterId}: Remaining={$this->remaining}, Duration={$this->duration}, IsRunning={$this->isRunning}");
+
+            // Dispatch an event for Alpine to pick up, specific to this component instance
+            $this->dispatch("torchTimerUpdatedEcho-{$this->encounterId}", $payload);
+            Log::info("TorchTimerDisplay dispatched internal event torchTimerUpdatedEcho-{$this->encounterId} with payload: " . json_encode($payload));
+        } else {
+            Log::info("TorchTimerDisplay ignored event for Encounter ID {$payload['encounterId']} as it doesn't match component's encounter ID {$this->encounterId}.");
         }
     }
 

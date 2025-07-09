@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Encounter;
 use Livewire\Component;
 use App\Events\TorchTimerUpdated;
+use Illuminate\Support\Facades\Log;
 
 class TorchTimerControls extends Component
 {
@@ -24,6 +25,7 @@ class TorchTimerControls extends Component
         $this->duration = $this->encounter->torch_timer_duration ?? 60; // Default to 60 minutes
         $this->remaining = $this->encounter->torch_timer_remaining ?? $this->duration;
         $this->isRunning = $this->encounter->torch_timer_is_running ?? false;
+        Log::info("TorchTimerControls mounted for Encounter ID {$this->encounter->id}: Duration={$this->duration}, Remaining={$this->remaining}, IsRunning={$this->isRunning}");
     }
 
     public function updatedDuration($value): void
@@ -90,7 +92,48 @@ class TorchTimerControls extends Component
 
     private function broadcastUpdate(): void
     {
-        event(new TorchTimerUpdated($this->encounter->id, $this->remaining, $this->duration, $this->isRunning));
+        $payload = [
+            'encounterId' => $this->encounter->id,
+            'remaining' => (int)$this->remaining,
+            'duration' => (int)$this->duration,
+            'isRunning' => (bool)$this->isRunning,
+        ];
+
+        Log::info("TorchTimerControls broadcasting update for Encounter ID {$this->encounter->id}: " . json_encode($payload));
+        try {
+            event(new TorchTimerUpdated(
+                $payload['encounterId'],
+                $payload['remaining'],
+                $payload['duration'],
+                $payload['isRunning']
+            ));
+            Log::info("TorchTimerControls event broadcasted successfully for Encounter ID {$this->encounter->id}.");
+
+            // Dispatch event for AlpineJS component on this client
+            $this->dispatch('torchTimerExternalUpdate', $payload);
+            Log::info("TorchTimerControls dispatched torchTimerExternalUpdate for self: " . json_encode($payload));
+
+        } catch (\Exception $e) {
+            Log::error("TorchTimerControls failed to broadcast event for Encounter ID {$this->encounter->id}: " . $e->getMessage());
+        }
+    }
+
+    public function syncState(): void
+    {
+        $this->encounter->refresh();
+        $this->duration = $this->encounter->torch_timer_duration ?? 60;
+        $this->remaining = $this->encounter->torch_timer_remaining ?? $this->duration;
+        $this->isRunning = $this->encounter->torch_timer_is_running ?? false;
+        Log::info("TorchTimerControls state synced for Encounter ID {$this->encounter->id}: Duration={$this->duration}, Remaining={$this->remaining}, IsRunning={$this->isRunning}");
+
+        $payload = [
+            'encounterId' => $this->encounter->id,
+            'remaining' => (int)$this->remaining,
+            'duration' => (int)$this->duration,
+            'isRunning' => (bool)$this->isRunning,
+        ];
+        $this->dispatch('torchTimerExternalUpdate', $payload);
+        Log::info("TorchTimerControls dispatched torchTimerExternalUpdate after sync: " . json_encode($payload));
     }
 
     public function render()
