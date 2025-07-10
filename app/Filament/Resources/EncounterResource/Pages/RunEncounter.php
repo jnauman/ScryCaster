@@ -55,22 +55,52 @@ class RunEncounter extends ViewRecord
     protected function prepareInitiativeInputs(): void
     {
         $this->initiativeInputs = [];
+        $this->record->loadMissing('monsterInstances.monster'); // Ensure monsters are loaded for display name logic
+
+        // Add player characters
         $this->record->playerCharacters->each(function (Character $pc) {
-            $this->initiativeInputs[] = [
+            $this->initiativeInputs['player_' . $pc->id] = [
                 'id' => $pc->id,
                 'name' => $pc->name,
                 'initiative' => $pc->pivot->initiative_roll ?? null,
                 'type' => 'player',
-                'key' => 'player_' . $pc->id, // Unique key for wire:model
+                // 'key' is implicitly the array key now
             ];
         });
-        $this->record->monsterInstances->each(function (MonsterInstance $mi) {
-            $this->initiativeInputs[] = [
+
+        $monsterInstances = $this->record->monsterInstances;
+        $groupedMonsters = $monsterInstances->whereNotNull('initiative_group')->where('initiative_group', '!=', '')->groupBy('initiative_group');
+        $ungroupedMonsters = $monsterInstances->whereNull('initiative_group')->union($monsterInstances->where('initiative_group', '==', ''));
+
+
+        // Add initiative groups
+        foreach ($groupedMonsters as $groupName => $instances) {
+            // Sort instances by monster name (base type) then by display name for consistent listing
+            $sortedInstances = $instances->sortBy([
+                fn($mi) => $mi->monster->name, // Sort by base monster name first
+                fn($mi) => $mi->display_name ?: $mi->monster->name, // Then by display name/actual name
+            ]);
+
+            // Use the initiative of the first monster in the original group, or null
+            $firstInstance = $instances->first(); // Initiative should be consistent for the group anyway
+            $monstersInGroupString = $sortedInstances->map(fn($mi) => $mi->display_name ?: $mi->monster->name)->join(', ');
+
+            $this->initiativeInputs['group_' . $groupName] = [
+                'id' => $groupName, // Group name serves as ID for the input field
+                'name' => "Group: {$groupName} ({$monstersInGroupString})",
+                'initiative' => $firstInstance->initiative_roll ?? null,
+                'type' => 'monster_group',
+                'member_ids' => $instances->pluck('id')->toArray(), // Store member IDs to update them later
+            ];
+        }
+
+        // Add individual (ungrouped) monster instances
+        $ungroupedMonsters->each(function (MonsterInstance $mi) {
+            $this->initiativeInputs['monster_' . $mi->id] = [
                 'id' => $mi->id,
-                'name' => $mi->monster->name,
+                'name' => $mi->display_name ?: $mi->monster->name,
                 'initiative' => $mi->initiative_roll ?? null,
                 'type' => 'monster_instance',
-                'key' => 'monster_' . $mi->id, // Unique key for wire:model
             ];
         });
     }
@@ -82,18 +112,30 @@ class RunEncounter extends ViewRecord
             return;
         }
 
-        foreach ($this->initiativeInputs as $input) {
-            $initiativeValue = is_numeric($input['initiative']) ? (int)$input['initiative'] : 0;
+        foreach ($this->initiativeInputs as $key => $input) {
+            $initiativeValue = is_numeric($input['initiative']) ? (int)$input['initiative'] : null; // Keep null if not numeric
+
             if ($input['type'] === 'player') {
                 $this->record->playerCharacters()->updateExistingPivot($input['id'], ['initiative_roll' => $initiativeValue]);
             } elseif ($input['type'] === 'monster_instance') {
                 MonsterInstance::find($input['id'])->update(['initiative_roll' => $initiativeValue]);
+            } elseif ($input['type'] === 'monster_group') {
+                // $input['id'] here is the groupName
+                MonsterInstance::whereIn('id', $input['member_ids'])->update(['initiative_roll' => $initiativeValue]);
             }
         }
 
-        $this->record->calculateOrder(); // This method should exist on the Encounter model
-        $this->record->current_turn = 1;
-        $this->record->current_round = 1;
+        $this->record->calculateOrder();
+        // Only reset turn/round if encounter hasn't started
+        if ($this->record->current_turn === null || $this->record->current_turn === 0) {
+            $this->record->current_turn = 1;
+            $this->record->current_round = ($this->record->current_round === null || $this->record->current_round === 0) ? 1 : $this->record->current_round; // Start at round 1 if not already set
+        }
+        // If current_round is 0 (e.g. after reset but before starting), set to 1
+        if ($this->record->current_round === 0 && $this->record->current_turn !==0) {
+             $this->record->current_round = 1;
+        }
+
         $this->record->save();
 
         $this->showInitiativeModal = false;
@@ -234,11 +276,13 @@ class RunEncounter extends ViewRecord
 		$monsterInstances = $this->record->monsterInstances()->with('monster')->orderBy('order', 'asc')->get()->map(function ($mi) {
 			// FIX: Use a local variable instead of changing the model property directly.
 			$currentHealth = $mi->current_health ?? $mi->monster->max_health;
+            $displayName = $mi->display_name ?: $mi->monster->name;
 
 			return [
 				'id' => $mi->id,
 				'type' => 'monster_instance',
-				'name' => $mi->monster->name,
+                'name' => $displayName, // Use display_name or fallback to monster name
+                'initiative_group' => $mi->initiative_group, // Added for visual indication
 				'order' => $mi->order,
 				'current_health' => $currentHealth,
 				'max_health' => $mi->monster->max_health,
@@ -304,26 +348,52 @@ class RunEncounter extends ViewRecord
 
 	public function nextTurn()
 	{
-		// Load both player characters and monster instances to get the total count
-		$playerCharacterCount = $this->record->playerCharacters()->count();
-		$monsterInstanceCount = $this->record->monsterInstances()->count();
-		$totalCombatants = $playerCharacterCount + $monsterInstanceCount;
+        $allCombatantsOrdered = $this->record->getCombatants(); // Gets all Character and MonsterInstance models, sorted by 'order'
+        $totalCombatantsCount = $allCombatantsOrdered->count();
 
-		if ($totalCombatants === 0) {
-			// No combatants, perhaps reset turn/round or do nothing
-			$this->record->current_turn = 0;
-			$this->record->current_round = $this->record->current_round > 0 ? $this->record->current_round : 1; // Keep round or set to 1
-			$this->record->save();
-			event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
-			return;
-		}
+        if ($totalCombatantsCount === 0) {
+            $this->record->current_turn = 0;
+            $this->record->current_round = max(1, $this->record->current_round ?? 1);
+            $this->record->save();
+            event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
+            return;
+        }
 
-		if ($this->record->current_turn < $totalCombatants) {
-			$this->record->current_turn++;
-		} else {
-			$this->record->current_turn = 1;
-			$this->record->current_round++;
-		}
+        if ($this->record->current_turn === null || $this->record->current_turn === 0) {
+            // Encounter hasn't started, or was reset. Start from the first combatant.
+            $this->record->current_turn = $allCombatantsOrdered->first()->order ?? 1;
+            $this->record->current_round = max(1, $this->record->current_round ?? 1);
+        } else {
+            $currentOrder = $this->record->current_turn;
+            $currentCombatant = $allCombatantsOrdered->firstWhere(function ($c) use ($currentOrder) {
+                return ($c instanceof Character ? $c->pivot->order : $c->order) == $currentOrder;
+            });
+
+            $nextOrderToFind = $currentOrder;
+
+            if ($currentCombatant instanceof MonsterInstance && $currentCombatant->initiative_group) {
+                // Current combatant is part of a group, find max order in this group
+                $groupMembers = $this->record->monsterInstances()
+                    ->where('initiative_group', $currentCombatant->initiative_group)
+                    ->get();
+                if ($groupMembers->isNotEmpty()) {
+                    $nextOrderToFind = $groupMembers->max('order');
+                }
+            }
+
+            // Find the next combatant whose order is strictly greater than $nextOrderToFind
+            $nextCombatant = $allCombatantsOrdered->firstWhere(function ($c) use ($nextOrderToFind) {
+                return ($c instanceof Character ? $c->pivot->order : $c->order) > $nextOrderToFind;
+            });
+
+            if ($nextCombatant) {
+                $this->record->current_turn = ($nextCombatant instanceof Character ? $nextCombatant->pivot->order : $nextCombatant->order);
+            } else {
+                // Reached end of round, go to first combatant of next round
+                $this->record->current_turn = $allCombatantsOrdered->first()->order ?? 1;
+                $this->record->current_round = ($this->record->current_round ?? 0) + 1;
+            }
+        }
 
 		$this->record->save();
 		event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));

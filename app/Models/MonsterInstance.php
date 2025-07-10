@@ -12,10 +12,12 @@ class MonsterInstance extends Model
 
     protected $fillable = [
         'monster_id',
+        'display_name', // Added
         'encounter_id',
         'current_health',
         'max_health',
         'initiative_roll',
+        'initiative_group', // Added
         'order',
     ];
 

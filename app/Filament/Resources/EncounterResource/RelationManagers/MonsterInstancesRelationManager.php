@@ -44,6 +44,12 @@ class MonsterInstancesRelationManager extends RelationManager
                     })
                     ->label('Monster Type')
                     ->columnSpanFull(),
+                TextInput::make('display_name')
+                    ->label('Display Name (Optional)')
+                    ->placeholder('Will use monster name if blank')
+                    ->nullable()
+                    ->maxLength(255)
+                    ->columnSpanFull(),
                 TextInput::make('max_health')
                     ->numeric()
                     ->required()
@@ -56,6 +62,11 @@ class MonsterInstancesRelationManager extends RelationManager
                     ->numeric()
                     ->nullable()
                     ->label('Initiative Roll'),
+                TextInput::make('initiative_group')
+                    ->label('Initiative Group (Optional)')
+                    ->nullable()
+                    ->maxLength(255)
+                    ->helperText('Monsters in the same group will share initiative.'),
             ]);
     }
 
@@ -63,11 +74,13 @@ class MonsterInstancesRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('monster.name')->label('Monster')->searchable()->sortable(),
+                TextColumn::make('monster.name')->label('Base Monster')->searchable()->sortable(),
+                TextColumn::make('display_name')->label('Display Name')->searchable()->sortable()->placeholder('N/A'),
                 TextColumn::make('current_health')->label('Current HP')->sortable(),
-                TextColumn::make('monster.ac')->label('AC (Base)')->sortable(),
                 TextColumn::make('monster.max_health')->label('Max HP (Base)')->sortable(),
+                TextColumn::make('monster.ac')->label('AC (Base)')->sortable(),
                 TextColumn::make('initiative_roll')->label('Initiative')->sortable(),
+                TextColumn::make('initiative_group')->label('Group')->sortable()->placeholder('N/A'),
             ])
             ->filters([
                 //

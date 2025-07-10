@@ -68,7 +68,8 @@ class EncounterDashboard extends Component
 			return [
 				'id' => $mi->id,
 				'type' => 'monster_instance',
-				'name' => $mi->monster->name,
+				'name' => $mi->display_name ?: $mi->monster->name, // Use display_name if available
+                'initiative_group' => $mi->initiative_group, // Added for player view indication
 				//'ac' => $mi->monster->ac,
 				'order' => $mi->order,
 				// 'original_model' => $mi, // Removed as it might cause issues with Livewire state and isn't used in blade
