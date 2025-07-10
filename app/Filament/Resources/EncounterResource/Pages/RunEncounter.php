@@ -55,22 +55,46 @@ class RunEncounter extends ViewRecord
     protected function prepareInitiativeInputs(): void
     {
         $this->initiativeInputs = [];
+        $this->record->loadMissing('monsterInstances.monster'); // Ensure monsters are loaded for display name logic
+
+        // Add player characters
         $this->record->playerCharacters->each(function (Character $pc) {
-            $this->initiativeInputs[] = [
+            $this->initiativeInputs['player_' . $pc->id] = [
                 'id' => $pc->id,
                 'name' => $pc->name,
                 'initiative' => $pc->pivot->initiative_roll ?? null,
                 'type' => 'player',
-                'key' => 'player_' . $pc->id, // Unique key for wire:model
+                // 'key' is implicitly the array key now
             ];
         });
-        $this->record->monsterInstances->each(function (MonsterInstance $mi) {
-            $this->initiativeInputs[] = [
+
+        $monsterInstances = $this->record->monsterInstances;
+        $groupedMonsters = $monsterInstances->whereNotNull('initiative_group')->where('initiative_group', '!=', '')->groupBy('initiative_group');
+        $ungroupedMonsters = $monsterInstances->whereNull('initiative_group')->union($monsterInstances->where('initiative_group', '==', ''));
+
+
+        // Add initiative groups
+        foreach ($groupedMonsters as $groupName => $instances) {
+            // Use the initiative of the first monster in the group, or null
+            $firstInstance = $instances->first();
+            $monstersInGroupString = $instances->map(fn($mi) => $mi->display_name ?: $mi->monster->name)->join(', ');
+
+            $this->initiativeInputs['group_' . $groupName] = [
+                'id' => $groupName, // Group name serves as ID for the input field
+                'name' => "Group: {$groupName} ({$monstersInGroupString})",
+                'initiative' => $firstInstance->initiative_roll ?? null,
+                'type' => 'monster_group',
+                'member_ids' => $instances->pluck('id')->toArray(), // Store member IDs to update them later
+            ];
+        }
+
+        // Add individual (ungrouped) monster instances
+        $ungroupedMonsters->each(function (MonsterInstance $mi) {
+            $this->initiativeInputs['monster_' . $mi->id] = [
                 'id' => $mi->id,
-                'name' => $mi->monster->name,
+                'name' => $mi->display_name ?: $mi->monster->name,
                 'initiative' => $mi->initiative_roll ?? null,
                 'type' => 'monster_instance',
-                'key' => 'monster_' . $mi->id, // Unique key for wire:model
             ];
         });
     }
@@ -82,18 +106,30 @@ class RunEncounter extends ViewRecord
             return;
         }
 
-        foreach ($this->initiativeInputs as $input) {
-            $initiativeValue = is_numeric($input['initiative']) ? (int)$input['initiative'] : 0;
+        foreach ($this->initiativeInputs as $key => $input) {
+            $initiativeValue = is_numeric($input['initiative']) ? (int)$input['initiative'] : null; // Keep null if not numeric
+
             if ($input['type'] === 'player') {
                 $this->record->playerCharacters()->updateExistingPivot($input['id'], ['initiative_roll' => $initiativeValue]);
             } elseif ($input['type'] === 'monster_instance') {
                 MonsterInstance::find($input['id'])->update(['initiative_roll' => $initiativeValue]);
+            } elseif ($input['type'] === 'monster_group') {
+                // $input['id'] here is the groupName
+                MonsterInstance::whereIn('id', $input['member_ids'])->update(['initiative_roll' => $initiativeValue]);
             }
         }
 
-        $this->record->calculateOrder(); // This method should exist on the Encounter model
-        $this->record->current_turn = 1;
-        $this->record->current_round = 1;
+        $this->record->calculateOrder();
+        // Only reset turn/round if encounter hasn't started
+        if ($this->record->current_turn === null || $this->record->current_turn === 0) {
+            $this->record->current_turn = 1;
+            $this->record->current_round = ($this->record->current_round === null || $this->record->current_round === 0) ? 1 : $this->record->current_round; // Start at round 1 if not already set
+        }
+        // If current_round is 0 (e.g. after reset but before starting), set to 1
+        if ($this->record->current_round === 0 && $this->record->current_turn !==0) {
+             $this->record->current_round = 1;
+        }
+
         $this->record->save();
 
         $this->showInitiativeModal = false;

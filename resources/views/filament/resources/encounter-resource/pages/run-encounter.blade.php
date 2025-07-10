@@ -36,14 +36,21 @@
 						<h2 class="text-xl font-bold mb-4 text-white">Enter Initiative Rolls</h2>
 						<form wire:submit.prevent="saveInitiativesAndStartEncounter">
 							<div class="space-y-4">
-								@forelse ($this->initiativeInputs as $index => $combatantInput)
+								@forelse ($this->initiativeInputs as $inputKey => $inputData)
 									<div class="flex items-center space-x-3 p-3 bg-gray-800 rounded-md">
-										<label for="initiative-{{ $combatantInput['key'] }}" class="text-gray-300 flex-1">
-											{{ $combatantInput['name'] }} ({{ Str::studly($combatantInput['type']) }})
+										<label for="initiative-{{ $inputKey }}" class="text-gray-300 flex-1">
+											{{ $inputData['name'] }}
+											@if ($inputData['type'] === 'player')
+												(Player)
+											@elseif ($inputData['type'] === 'monster_instance')
+												(Monster)
+											@elseif ($inputData['type'] === 'monster_group')
+												(Group)
+											@endif
 										</label>
 										<input type="number"
-											   id="initiative-{{ $combatantInput['key'] }}"
-											   wire:model.defer="initiativeInputs.{{ $index }}.initiative"
+											   id="initiative-{{ $inputKey }}"
+											   wire:model.defer="initiativeInputs.{{ $inputKey }}.initiative"
 											   style="background-color: var(--color-havelock-blue-900);"
 											   class="w-24 text-white border border-gray-600 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500"
 											   placeholder="Roll">
