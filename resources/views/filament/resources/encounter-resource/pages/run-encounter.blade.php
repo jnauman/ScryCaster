@@ -7,6 +7,11 @@
 			<p class="text-lg mb-2">Round: <span class="font-semibold">{{ $record->current_round ?? 0 }}</span></p>
 			<p class="text-lg mb-2">Turn: <span class="font-semibold">{{ $record->current_turn ?? 'Not Started' }}</span></p>
 
+            {{-- Torch Timer Controls --}}
+            <div class="my-4">
+                @livewire('torch-timer-controls', ['encounter' => $record])
+            </div>
+
 			{{-- Action Buttons Container --}}
 			<div class="my-4 flex space-x-3">
 				<x-filament::button wire:click="displayInitiativeModal" icon="heroicon-o-play">

@@ -32,6 +32,9 @@ class Encounter extends Model
 		'campaign_id',    // Foreign key linking to the Campaign this encounter belongs to
 		// 'current_image', // Path to the current image displayed for the encounter - REMOVED
 		'selected_campaign_image_id', // Foreign key to the selected campaign image
+		'torch_timer_duration',
+		'torch_timer_remaining',
+		'torch_timer_is_running',
 	];
 
 	/**

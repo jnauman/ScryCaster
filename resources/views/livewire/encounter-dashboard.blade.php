@@ -4,11 +4,17 @@
     @if ($encounter)
 
         <h1 class="text-3xl font-extrabold mt-2 mb-2 text-center text-[var(--color-accent)]">Encounter: {{ $encounter->name }}</h1>
-        <p class="text-xl mb-3 text-center text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-400)]">Round: {{ $encounter->current_round }}</p>
+        <p class="text-xl mb-1 text-center text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-400)]">Round: {{ $encounter->current_round }}</p>
+
+        {{-- Torch Timer Display --}}
+        <div class="my-3 max-w-xs mx-auto">
+            @livewire('torch-timer-display', ['encounter' => $encounter])
+        </div>
 
         <div class="flex flex-col lg:flex-row w-full items-start lg:h-[calc(100vh-200px)] gap-6">
             {{-- Combatants List --}}
             <div class="w-full lg:w-1/3 flex-shrink-0 lg:pr-4 overflow-y-auto h-96 lg:h-full bg-[var(--color-zinc-100)] dark:bg-[var(--color-zinc-800)] p-4 rounded-lg shadow-md">
+                {{-- Adjusted h2 margin due to Torch Timer potentially being above this on smaller screens if layout shifts --}}
                 <h2 class="text-2xl font-bold mb-3 text-[var(--color-zinc-800)] dark:text-[var(--color-zinc-200)]">Turn Order</h2>
                 <div id="encounter-{{ $encounter->id }}-combatants">
                     <ul class="space-y-2">
