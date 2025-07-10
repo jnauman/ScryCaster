@@ -1,20 +1,20 @@
 <div x-data="torchTimerDisplay_{{ $encounterId }}({{ $remaining ?? 'null' }}, {{ $isRunning ? 'true' : 'false' }}, {{ $duration ?? 'null' }})"
      x-init="initTimer()"
-     wire:ignoreিয়াল <!-- Prevent Livewire from re-rendering the Alpine component root frequently -->
+     wire:ignore.self
      class="p-3 bg-gray-800 bg-opacity-70 rounded-lg shadow-md text-center">
 
-    <template x-if="duration === null || remaining === null">
+    <template x-if="durationSeconds === null || remainingSeconds === null">
         <p class="text-sm text-gray-400">Torch status not available.</p>
     </template>
 
-    <template x-if="duration !== null && remaining !== null">
+    <template x-if="durationSeconds !== null && remainingSeconds !== null">
         <div>
             <h4 class="text-md font-semibold mb-1 text-yellow-400">Torch Light</h4>
             <p class="text-3xl font-bold"
                :class="{
-                   'text-red-500': isRunning && remainingSeconds <= (durationSeconds * 0.1) && remainingSeconds > 0,
+                   'text-red-500': isRunning && remainingSeconds !== null && durationSeconds !== null && remainingSeconds <= (durationSeconds * 0.1) && remainingSeconds > 0,
                    'text-red-700': isRunning && remainingSeconds === 0, // More distinct for burnt out while 'running'
-                   'text-green-400': isRunning && remainingSeconds > (durationSeconds * 0.1),
+                   'text-green-400': isRunning && remainingSeconds !== null && durationSeconds !== null && remainingSeconds > (durationSeconds * 0.1),
                    'text-gray-400': !isRunning
                }"
                x-text="timeFormatted()">
@@ -52,8 +52,9 @@
     </template>
 </div>
 
-@push('scripts')
 <script>
+    // Ensure this function is defined before Alpine tries to use it.
+    // This is placed outside @push to avoid potential load order issues with x-init.
     function torchTimerDisplay_{{ $encounterId }}(initialRemainingMinutes, initialIsRunning, initialDurationMinutes) {
         return {
             remainingSeconds: initialRemainingMinutes !== null ? Math.max(0, initialRemainingMinutes * 60) : null,
@@ -124,4 +125,3 @@
         }
     }
 </script>
-@endpush
