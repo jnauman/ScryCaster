@@ -39,7 +39,12 @@
                                             - {{ $combatant['title'] }}
                                         @endif
                                     </span>
-                                    <span class="text-xs text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)]">({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})</span>
+                                    <span class="text-xs text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)]">
+                                        ({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})
+                                        @if ($combatant['type'] === 'monster_instance' && !empty($combatant['initiative_group']))
+                                            <span class="italic text-[var(--color-zinc-400)] dark:text-[var(--color-zinc-500)] ml-1">(Group: {{ $combatant['initiative_group'] }})</span>
+                                        @endif
+                                    </span>
 
                                     @if ($combatant['type'] === 'player')
                                         <div class="text-sm mt-1 text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-300)]">

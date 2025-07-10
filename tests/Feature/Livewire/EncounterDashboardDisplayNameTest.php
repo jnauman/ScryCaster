@@ -77,4 +77,40 @@ class EncounterDashboardDisplayNameTest extends TestCase
         $this->assertCount(1, $combatants);
         $this->assertEquals('Orc Warrior', $combatants[0]['name']);
     }
+
+    public function test_monster_instance_data_includes_initiative_group_for_player_view()
+    {
+        $monster = Monster::factory()->create();
+        MonsterInstance::factory()->create([
+            'encounter_id' => $this->encounter->id,
+            'monster_id' => $monster->id,
+            'initiative_group' => 'Wolf Pack',
+            'order' => 1,
+        ]);
+
+        $component = Livewire::test(EncounterDashboard::class, ['encounter' => $this->encounter]);
+        $combatants = $component->get('combatants');
+
+        $this->assertCount(1, $combatants);
+        $this->assertArrayHasKey('initiative_group', $combatants[0]);
+        $this->assertEquals('Wolf Pack', $combatants[0]['initiative_group']);
+    }
+
+    public function test_monster_instance_data_has_null_initiative_group_if_not_set()
+    {
+        $monster = Monster::factory()->create();
+        MonsterInstance::factory()->create([
+            'encounter_id' => $this->encounter->id,
+            'monster_id' => $monster->id,
+            'initiative_group' => null, // Explicitly null
+            'order' => 1,
+        ]);
+
+        $component = Livewire::test(EncounterDashboard::class, ['encounter' => $this->encounter]);
+        $combatants = $component->get('combatants');
+
+        $this->assertCount(1, $combatants);
+        $this->assertArrayHasKey('initiative_group', $combatants[0]);
+        $this->assertNull($combatants[0]['initiative_group']);
+    }
 }

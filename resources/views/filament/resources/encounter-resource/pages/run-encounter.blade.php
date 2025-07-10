@@ -105,6 +105,9 @@
 									<div class="flex items-center">
                                        <span class="font-bold text-xl {{ $isCurrentTurn ? 'text-white' : 'text-gray-100' }} mr-2">
                                           {{ $combatant['name'] }}
+                                          @if ($combatant['type'] === 'monster_instance' && !empty($combatant['initiative_group']))
+                                            <span class="text-sm text-gray-400 ml-1 italic">({{ $combatant['initiative_group'] }})</span>
+                                          @endif
                                        </span>
 										<span class="text-xs px-2 py-0.5 rounded-full {{ $combatant['type'] === 'player' ? 'bg-blue-600' : 'bg-red-600' }} text-white mr-2">
                                           {{ Str::studly($combatant['type']) }}
