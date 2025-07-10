@@ -28,7 +28,7 @@ class TorchTimerDisplay extends Component
     public function getListeners(): array
     {
         return [
-            "echo-private:encounter.{$this->encounterId},.TorchTimerUpdated" => 'handleTorchTimerUpdate',
+            "echo:encounter.{$this->encounterId},.TorchTimerUpdated" => 'handleTorchTimerUpdate',
         ];
     }
 

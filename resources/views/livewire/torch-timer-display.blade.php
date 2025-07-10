@@ -53,13 +53,14 @@
 </div>
 
 <script>
-    // Ensure this function is defined before Alpine tries to use it.
-    // This is placed outside @push to avoid potential load order issues with x-init.
-    function torchTimerDisplay_{{ $encounterId }}(initialRemainingMinutes, initialIsRunning, initialDurationMinutes) {
+    function torchTimerDisplay_{{ $encounterId }}(initialRemaining, initialIsRunning, initialDuration) {
         return {
-            remainingSeconds: initialRemainingMinutes !== null ? Math.max(0, initialRemainingMinutes * 60) : null,
+            // Note: Your initial values from PHP are already integers, no need for multiplication here
+            // if you pass them as seconds. But your current PHP passes minutes, so we'll stick to that.
+            // For clarity, I've renamed the parameters to show they are minutes.
+            remainingSeconds: initialRemaining !== null ? Math.max(0, initialRemaining * 60) : null,
             isRunning: initialIsRunning,
-            durationSeconds: initialDurationMinutes !== null ? Math.max(0, initialDurationMinutes * 60) : null,
+            durationSeconds: initialDuration !== null ? Math.max(0, initialDuration * 60) : null,
             interval: null,
 
             initTimer() {
@@ -67,18 +68,24 @@
                     this.startClientTimer();
                 }
 
-                // Listen for Livewire event that Echo forwards
-                Livewire.on('torchTimerUpdatedEcho-{{ $encounterId }}', (eventData) => {
-                    console.log('Display {{ $encounterId }} received torchTimerUpdatedEcho:', eventData);
-                    this.durationSeconds = eventData.duration !== null ? Math.max(0, eventData.duration * 60) : null;
-                    this.remainingSeconds = eventData.remaining !== null ? Math.max(0, eventData.remaining * 60) : null;
-                    this.isRunning = eventData.isRunning;
+                // Listen for Livewire event
+                Livewire.on('torchTimerUpdatedEcho-{{ $encounterId }}', (event) => {
+                    // *** THIS IS THE FIX ***
+                    // Access the payload from event.detail[0]
+
+                    const payload = event[0];
+
+                    console.log('Display {{ $encounterId }} received torchTimerUpdatedEcho:', payload);
+
+                    // Now use the payload object
+                    this.durationSeconds = payload.duration !== null ? Math.max(0, payload.duration * 60) : null;
+                    this.remainingSeconds = payload.remaining !== null ? Math.max(0, payload.remaining * 60) : null;
+                    this.isRunning = payload.isRunning;
 
                     if (this.isRunning && this.remainingSeconds !== null && this.remainingSeconds > 0) {
                         this.startClientTimer();
                     } else {
                         this.stopClientTimer();
-                         // If timer reached zero from server, ensure isRunning is false.
                         if (this.remainingSeconds === 0) {
                             this.isRunning = false;
                         }
@@ -89,7 +96,7 @@
             startClientTimer() {
                 if (this.interval) clearInterval(this.interval);
                 if (!this.isRunning || this.remainingSeconds === null || this.remainingSeconds <= 0) {
-                    this.stopClientTimer(); // Ensure timer is stopped if conditions aren't met
+                    this.stopClientTimer();
                     return;
                 }
 
@@ -97,7 +104,7 @@
                     if (this.remainingSeconds !== null && this.remainingSeconds > 0) {
                         this.remainingSeconds--;
                     } else {
-                        this.isRunning = false; // Visually stop
+                        this.isRunning = false;
                         this.stopClientTimer();
                     }
                 }, 1000);

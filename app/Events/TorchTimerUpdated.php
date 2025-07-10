@@ -4,8 +4,6 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -38,7 +36,7 @@ class TorchTimerUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('encounter.' . $this->encounterId),
+            new Channel('encounter.' . $this->encounterId),
         ];
     }
 
@@ -49,4 +47,13 @@ class TorchTimerUpdated implements ShouldBroadcast
     {
         return 'TorchTimerUpdated';
     }
+
+	public function broadcastWith(): array
+	{
+		return [
+			'encounterId' => $this->encounterId,
+			'remaining' => $this->remaining,
+			'duration' => $this->duration,
+		];
+	}
 }
