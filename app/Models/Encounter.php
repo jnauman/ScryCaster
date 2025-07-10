@@ -62,36 +62,109 @@ public function calculateOrder(): void
         ]);
     });
 
-    // Add monster instances
-    $this->monsterInstances()->with('monster')->get()->each(function ($mi) use ($combatants) { // Eager load monster for dexterity
+    // Add monster instances and determine group initiatives
+    $monsterGroupsData = []; // To store highest initiative/dex for each group
+    $rawMonsterInstances = $this->monsterInstances()->with('monster')->get();
+
+    foreach ($rawMonsterInstances as $mi) {
+        $groupName = $mi->initiative_group;
+        $currentInitiative = $mi->initiative_roll ?? 0;
+        $currentDexterity = $mi->monster->dexterity ?? 10;
+
+        if ($groupName) {
+            if (!isset($monsterGroupsData[$groupName])) {
+                $monsterGroupsData[$groupName] = [
+                    'initiative_roll' => $currentInitiative,
+                    'dexterity_for_tiebreak' => $currentDexterity,
+                    'members_at_highest_initiative' => [$currentDexterity] // Store dex for tie-breaking among highest initiative
+                ];
+            } else {
+                // Compare with existing group data
+                if ($currentInitiative > $monsterGroupsData[$groupName]['initiative_roll']) {
+                    // New highest initiative for the group
+                    $monsterGroupsData[$groupName]['initiative_roll'] = $currentInitiative;
+                    $monsterGroupsData[$groupName]['dexterity_for_tiebreak'] = $currentDexterity; // Tentative, might be overridden by another member with same init but higher dex
+                    $monsterGroupsData[$groupName]['members_at_highest_initiative'] = [$currentDexterity];
+                } elseif ($currentInitiative == $monsterGroupsData[$groupName]['initiative_roll']) {
+                    // Same initiative as current group max, check dexterity for overall group tie-breaking
+                    $monsterGroupsData[$groupName]['members_at_highest_initiative'][] = $currentDexterity;
+                    // The group's effective dexterity is the max of all members sharing the highest initiative
+                    $monsterGroupsData[$groupName]['dexterity_for_tiebreak'] = max($monsterGroupsData[$groupName]['members_at_highest_initiative']);
+                }
+                // If currentInitiative is lower, do nothing for group's effective stats
+            }
+        }
+    }
+    // Clean up 'members_at_highest_initiative' as it's no longer needed after this point
+    foreach ($monsterGroupsData as $groupName => &$data) {
+        unset($data['members_at_highest_initiative']);
+    }
+
+    // Now, build the combatants list using group data where applicable
+    foreach ($rawMonsterInstances as $mi) {
+        $groupName = $mi->initiative_group;
+        $initiativeRoll = $mi->initiative_roll ?? 0;
+        $dexterityForTiebreak = $mi->monster->dexterity ?? 10;
+
+        if ($groupName && isset($monsterGroupsData[$groupName])) {
+            // Use group's determined initiative and dexterity for sorting purposes
+            $effectiveInitiativeRoll = $monsterGroupsData[$groupName]['initiative_roll'];
+            $effectiveDexterityForTiebreak = $monsterGroupsData[$groupName]['dexterity_for_tiebreak'];
+        } else {
+            // Use individual monster's initiative and dexterity
+            $effectiveInitiativeRoll = $initiativeRoll;
+            $effectiveDexterityForTiebreak = $dexterityForTiebreak;
+        }
+
         $combatants->push([
             'id' => $mi->id,
             'type' => 'monster_instance',
-            'initiative_roll' => $mi->initiative_roll ?? 0,          // initiative_roll from MonsterInstance model
-            'dexterity_for_tiebreak' => $mi->monster->dexterity ?? 10, // dexterity from related Monster model
+            'initiative_roll' => $initiativeRoll, // Store original roll for reference if needed
+            'dexterity_for_tiebreak' => $dexterityForTiebreak, // Store original dex for reference
+            'effective_initiative_roll' => $effectiveInitiativeRoll, // For sorting
+            'effective_dexterity_for_tiebreak' => $effectiveDexterityForTiebreak, // For sorting
             'original_model' => $mi
         ]);
-    });
+    }
 
     // Sort the combatants
-    // Primary sort by initiative_roll (desc), secondary by dexterity_for_tiebreak (desc)
+    // Primary sort by effective_initiative_roll (desc), secondary by effective_dexterity_for_tiebreak (desc)
     $sortedCombatants = $combatants->sortByDesc(function ($combatant) {
-        return sprintf('%03d-%03d', $combatant['initiative_roll'], $combatant['dexterity_for_tiebreak']);
+        $initiative = $combatant['effective_initiative_roll'] ?? $combatant['initiative_roll']; // Fallback for players
+        $dexterity = $combatant['effective_dexterity_for_tiebreak'] ?? $combatant['dexterity_for_tiebreak']; // Fallback for players
+        return sprintf('%03d-%03d', $initiative, $dexterity);
     })->values(); // values() re-indexes the collection
 
 
     // Update order
-    $orderIndex = 1;
+    $currentOrderValue = 0;
+    $lastInitiativeSignature = null;
+
+    // Eager load monster instances again for efficient update if necessary, or use existing models
+    // This ensures we are updating the correct instances if models were modified elsewhere (unlikely here)
+    $allMonsterInstancesById = $rawMonsterInstances->keyBy('id');
+
     foreach ($sortedCombatants as $combatantData) {
+        $initiative = $combatantData['effective_initiative_roll'] ?? $combatantData['initiative_roll'];
+        $dexterity = $combatantData['effective_dexterity_for_tiebreak'] ?? $combatantData['dexterity_for_tiebreak'];
+        $currentInitiativeSignature = sprintf('%03d-%03d', $initiative, $dexterity);
+
+        if ($currentInitiativeSignature !== $lastInitiativeSignature) {
+            $currentOrderValue++;
+            $lastInitiativeSignature = $currentInitiativeSignature;
+        }
+
         if ($combatantData['type'] === 'player') {
             // For BelongsToMany, updateExistingPivot is used.
-            $this->playerCharacters()->updateExistingPivot($combatantData['id'], ['order' => $orderIndex]);
+            $this->playerCharacters()->updateExistingPivot($combatantData['id'], ['order' => $currentOrderValue]);
         } elseif ($combatantData['type'] === 'monster_instance') {
             // For HasMany, update the model instance directly.
-            $monsterInstance = $combatantData['original_model'];
-            $monsterInstance->update(['order' => $orderIndex]);
+            // $monsterInstance = $combatantData['original_model']; // This is the instance from the earlier fetch
+            $monsterInstance = $allMonsterInstancesById->get($combatantData['id']);
+            if ($monsterInstance) {
+                $monsterInstance->update(['order' => $currentOrderValue]);
+            }
         }
-        $orderIndex++;
     }
 }
 

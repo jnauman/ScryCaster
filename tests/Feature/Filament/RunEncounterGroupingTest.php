@@ -156,26 +156,40 @@ class RunEncounterGroupingTest extends TestCase
         ]);
 
         // Setup encounter state
-        $this->encounter->calculateOrder(); // This will set orders: GM1 (1), GM2 (2), IM1 (3) due to implicit sorting if dex is same, or explicit if different
-        // Manually ensure distinct orders for testing if calculateOrder is too complex for this specific test setup
-        $gm1->update(['order' => 1]);
-        $gm2->update(['order' => 2]); // Same group, so they act together
-        $individualMonster->update(['order' => 3]);
+        $this->encounter->calculateOrder(); // This will set orders based on new logic
 
-        $this->encounter->update(['current_turn' => 1, 'current_round' => 1]); // Start with GM1
+        // After calculateOrder, gm1 and gm2 should share an order, and individualMonster will have the next order.
+        // Let's find out what those orders are.
+        $gm1->refresh();
+        $gm2->refresh();
+        $individualMonster->refresh();
+
+        $groupOrder = $gm1->order; // gm1 and gm2 will share this order
+        $individualOrder = $individualMonster->order;
+
+        // Assert that the setup is as expected (group comes before individual)
+        $this->assertLessThan($individualOrder, $groupOrder, "Grouped monsters should have a lower (earlier) order number than the individual monster.");
+        $this->assertEquals($gm1->order, $gm2->order, "Grouped monsters gm1 and gm2 should share the same order number.");
+
+        // Start the encounter, current turn is the group's turn
+        $this->encounter->update(['current_turn' => $groupOrder, 'current_round' => 1]);
 
         $livewire = Livewire::test(RunEncounter::class, ['record' => $this->encounter->getRouteKey()]);
 
-        // GM1's turn (order 1), belongs to 'Grouped'
+        // It's the Grouped monsters' turn (e.g., order 1)
         $livewire->call('nextTurn');
-        // Should skip GM2 (order 2, also 'Grouped') and go to IM1 (order 3)
-        $this->assertEquals(3, $this->encounter->refresh()->current_turn);
-        $this->assertEquals(1, $this->encounter->current_round);
+        $this->encounter->refresh();
 
-        // IM1's turn (order 3)
+        // The turn should now be the individualMonster's turn (e.g., order 2)
+        $this->assertEquals($individualOrder, $this->encounter->current_turn, "Next turn should be the individual monster's order.");
+        $this->assertEquals(1, $this->encounter->current_round, "Round should still be 1.");
+
+        // It's the individualMonster's turn
         $livewire->call('nextTurn');
-        // Should go to GM1 (order 1) of next round
-        $this->assertEquals(1, $this->encounter->refresh()->current_turn);
-        $this->assertEquals(2, $this->encounter->current_round);
+        $this->encounter->refresh();
+
+        // The turn should go back to the Grouped monsters' turn (e.g., order 1) and the round should increment
+        $this->assertEquals($groupOrder, $this->encounter->current_turn, "Next turn should be the group's order again.");
+        $this->assertEquals(2, $this->encounter->current_round, "Round should have incremented.");
     }
 }
