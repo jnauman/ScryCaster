@@ -300,36 +300,81 @@ class RunEncounter extends ViewRecord
                 'traits' => $mi->monster->traits, // Ensure this is an array or string as expected by blade
                 'attacks' => $mi->monster->attacks, // Ensure this is an array or string as expected by blade
 				'original_model' => $mi,
+                'group_color' => $mi->group_color, // Added group_color
 			];
 		});
 
-		$allCombatants = $playerCharacters->merge($monsterInstances)
-										 ->sortBy('order')
-										 ->values();
+		// $allCombatants = $playerCharacters->merge($monsterInstances)
+		// 								 ->sortBy('order')
+		// 								 ->values();
+        // $this->combatantsForView = $allCombatants->all();
 
-		$this->combatantsForView = $allCombatants->all();
+        // New grouping logic
+        $groupedCombatants = [];
+        $playerGroupIndex = 0; // For unique keys for player "groups"
+        $allCombatantsSorted = $playerCharacters->merge($monsterInstances)->sortBy('order');
+
+        foreach ($allCombatantsSorted as $combatantData) {
+            // Make sure original_model is available for monster instances
+            $monsterInstanceModel = null;
+            if ($combatantData['type'] === 'monster_instance') {
+                // The 'original_model' key should already be populated in the $monsterInstances mapping
+                $monsterInstanceModel = $combatantData['original_model'] ?? null;
+            }
+
+            if ($combatantData['type'] === 'monster_instance' && !empty($combatantData['initiative_group'])) {
+                $groupName = $combatantData['initiative_group'];
+
+                if (!isset($groupedCombatants[$groupName])) {
+                    $groupedCombatants[$groupName] = [
+                        'type' => 'group',
+                        'name' => $groupName,
+                        // Use group_color from the model if available, otherwise default or empty
+                        'group_css_classes' => $monsterInstanceModel ? $monsterInstanceModel->group_color : '',
+                        'combatants' => [],
+                        'order' => $combatantData['order'], // Use order of first member for group sorting
+                    ];
+                }
+                $groupedCombatants[$groupName]['combatants'][] = $combatantData;
+            } else {
+                // Players and ungrouped monsters
+                $groupKey = 'individual-' . $combatantData['type'] . '-' . ($combatantData['type'] === 'player' ? $playerGroupIndex++ : $combatantData['id']);
+                $groupedCombatants[$groupKey] = [
+                    'type' => 'individual',
+                    'name' => $combatantData['name'],
+                    'group_css_classes' => '', // No group border
+                    'combatants' => [$combatantData], // Contains itself as a single combatant
+                    'order' => $combatantData['order'],
+                ];
+            }
+        }
+        // Sort groups by the order of their first member / individual order
+        uasort($groupedCombatants, function ($a, $b) {
+            return $a['order'] <=> $b['order'];
+        });
+        $this->combatantsForView = array_values($groupedCombatants); // Re-index
+
 
         // Initialize or update expanded states
         $currentTurnOrder = $this->record->current_turn;
-        $activeMonsterInstanceIds = $monsterInstances->pluck('id')->toArray();
+        $activeMonsterInstanceIds = $allCombatantsSorted->where('type', 'monster_instance')->pluck('id')->toArray(); // Corrected: Use $allCombatantsSorted
 
         // Preserve existing states for monsters still in combat
         $currentExpandedStates = array_intersect_key($this->expandedMonsterInstances, array_flip($activeMonsterInstanceIds));
 
-        foreach ($activeMonsterInstanceIds as $id) {
-            if (!array_key_exists($id, $currentExpandedStates)) { // For new monsters or those not previously in expandedMonsterInstances
-                $combatant = $allCombatants->firstWhere('id', $id); // Find the combatant data
-                if ($combatant && $combatant['type'] === 'monster_instance') {
+        // Iterate over monster instances from $allCombatantsSorted to set initial expansion states
+        foreach ($allCombatantsSorted as $combatantDataItem) {
+            if ($combatantDataItem['type'] === 'monster_instance') {
+                $id = $combatantDataItem['id'];
+                if (!array_key_exists($id, $currentExpandedStates)) { // For new monsters or those not previously in expandedMonsterInstances
                     // Default to expanded if it's the current turn, otherwise collapsed.
-                    $currentExpandedStates[$id] = ($combatant['order'] == $currentTurnOrder);
+                    $currentExpandedStates[$id] = ($combatantDataItem['order'] == $currentTurnOrder);
+                }
+                // Ensure the current turn monster is expanded
+                if ($combatantDataItem['order'] == $currentTurnOrder) {
+                    $currentExpandedStates[$id] = true;
                 }
             }
-            // If it's the active turn monster, ensure it's expanded (this might be redundant if nextTurn also handles it, but good for initial load)
-            $combatant = $allCombatants->firstWhere('id', $id);
-            if($combatant && $combatant['type'] === 'monster_instance' && $combatant['order'] == $currentTurnOrder) {
-                $currentExpandedStates[$id] = true;
-            }
-
         }
         $this->expandedMonsterInstances = $currentExpandedStates;
 	}
@@ -397,20 +442,7 @@ class RunEncounter extends ViewRecord
 
 		$this->record->save();
 		event(new TurnChanged($this->record->id, $this->record->current_turn, $this->record->current_round));
-		$this->loadCombatantsForView(); // Reloads combatant data
-
-        // After combatants are loaded and view data is updated, set expanded states
-        $newCurrentTurnOrder = $this->record->current_turn;
-        foreach (array_keys($this->expandedMonsterInstances) as $monsterId) {
-            $combatant = collect($this->combatantsForView)->firstWhere('id', $monsterId);
-            if ($combatant && $combatant['type'] === 'monster_instance') {
-                 $this->expandedMonsterInstances[$monsterId] = ($combatant['order'] == $newCurrentTurnOrder);
-            } else {
-                // If monster somehow not found in combatantsForView (e.g. removed), ensure its state is cleaned.
-                // This should ideally be handled by loadCombatantsForView's array_intersect_key.
-                unset($this->expandedMonsterInstances[$monsterId]);
-            }
-        }
+		$this->loadCombatantsForView(); // Reloads combatant data and correctly sets expandedMonsterInstances based on current turn
 	}
 
 	protected function getHeaderActions(): array

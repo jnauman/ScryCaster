@@ -14,6 +14,7 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Table;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ColorPicker; // Added import
 use Filament\Tables\Columns\TextColumn;
 
 class MonsterInstancesRelationManager extends RelationManager
@@ -67,6 +68,11 @@ class MonsterInstancesRelationManager extends RelationManager
                     ->nullable()
                     ->maxLength(255)
                     ->helperText('Monsters in the same group will share initiative.'),
+                ColorPicker::make('group_color')
+                    ->label('Group Color')
+                    ->helperText('Assign a color to visually group this monster with others sharing the same Initiative Group name.')
+                    ->nullable()
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -81,6 +87,7 @@ class MonsterInstancesRelationManager extends RelationManager
                 TextColumn::make('monster.ac')->label('AC (Base)')->sortable(),
                 TextColumn::make('initiative_roll')->label('Initiative')->sortable(),
                 TextColumn::make('initiative_group')->label('Group')->sortable()->placeholder('N/A'),
+                TextColumn::make('group_color')->label('Group Color')->sortable()->placeholder('N/A'),
             ])
             ->filters([
                 //
