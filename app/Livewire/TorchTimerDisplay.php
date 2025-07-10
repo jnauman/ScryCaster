@@ -16,9 +16,12 @@ class TorchTimerDisplay extends Component
     public function mount(Encounter $encounter): void
     {
         $this->encounterId = $encounter->id;
-        $this->remaining = $encounter->torch_timer_remaining;
-        $this->duration = $encounter->torch_timer_duration;
-        $this->isRunning = $encounter->torch_timer_is_running ?? false;
+        $this->duration = (int)($encounter->torch_timer_duration ?? 0); // Default to 0 if not set, Alpine will handle null for display
+        $this->remaining = (int)($encounter->torch_timer_remaining ?? $this->duration);
+        if ($encounter->torch_timer_duration !== null && $encounter->torch_timer_remaining !== null && $this->remaining > $this->duration) {
+            $this->remaining = $this->duration;
+        }
+        $this->isRunning = (bool)($encounter->torch_timer_is_running ?? false);
         Log::info("TorchTimerDisplay mounted for Encounter ID {$this->encounterId}: Duration={$this->duration}, Remaining={$this->remaining}, IsRunning={$this->isRunning}");
     }
 

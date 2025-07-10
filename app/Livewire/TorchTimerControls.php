@@ -22,32 +22,48 @@ class TorchTimerControls extends Component
     public function mount(Encounter $encounter): void
     {
         $this->encounter = $encounter;
-        $this->duration = $this->encounter->torch_timer_duration ?? 60; // Default to 60 minutes
-        $this->remaining = $this->encounter->torch_timer_remaining ?? $this->duration;
-        $this->isRunning = $this->encounter->torch_timer_is_running ?? false;
+        $this->duration = (int)($this->encounter->torch_timer_duration ?? 60); // Default to 60 minutes
+        $this->remaining = (int)($this->encounter->torch_timer_remaining ?? $this->duration);
+        // Ensure remaining does not exceed duration if both are set from DB
+        if ($this->encounter->torch_timer_duration !== null && $this->encounter->torch_timer_remaining !== null && $this->remaining > $this->duration) {
+            $this->remaining = $this->duration;
+        }
+        $this->isRunning = (bool)($this->encounter->torch_timer_is_running ?? false);
         Log::info("TorchTimerControls mounted for Encounter ID {$this->encounter->id}: Duration={$this->duration}, Remaining={$this->remaining}, IsRunning={$this->isRunning}");
     }
 
     public function updatedDuration($value): void
     {
         $this->validateOnly('duration');
-        $this->encounter->torch_timer_duration = $value;
-        // If duration changes and remaining is greater, or if timer is not set, reset remaining and stop timer.
-        if ($this->remaining === null || $this->remaining > $value || $value == 0) {
-            $this->remaining = $value > 0 ? $value : 0; // Set remaining to new duration or 0
-            $this->isRunning = false; // Stop the timer
+        $newDuration = is_numeric($value) ? (int)$value : 0;
+        $this->duration = $newDuration; // Update Livewire property
+        $this->encounter->torch_timer_duration = $newDuration;
+
+        if ($this->remaining === null || $this->remaining > $newDuration || $newDuration == 0) {
+            $this->remaining = $newDuration > 0 ? $newDuration : 0;
+            $this->isRunning = false;
             $this->encounter->torch_timer_remaining = $this->remaining;
             $this->encounter->torch_timer_is_running = $this->isRunning;
         }
+        // Ensure Livewire properties are also updated if changed indirectly
+        $this->duration = (int)$this->encounter->torch_timer_duration;
+        $this->remaining = (int)$this->encounter->torch_timer_remaining;
+        $this->isRunning = (bool)$this->encounter->torch_timer_is_running;
+
         $this->encounter->save();
+        Log::info("updatedDuration saved Encounter ID {$this->encounter->id}: Duration={$this->encounter->torch_timer_duration}, Remaining={$this->encounter->torch_timer_remaining}, IsRunning={$this->encounter->torch_timer_is_running}");
         $this->broadcastUpdate();
     }
 
     public function updatedRemaining($value): void
     {
+        // This is typically called if wire:model.lazy="remaining" is used directly,
+        // but manual adjustment methods (addTime, subtractTime) are preferred for better control.
         $this->validateOnly('remaining');
-        $this->encounter->torch_timer_remaining = $value;
+        $this->remaining = is_numeric($value) ? (int)$value : 0;
+        $this->encounter->torch_timer_remaining = $this->remaining;
         $this->encounter->save();
+        Log::info("updatedRemaining saved Encounter ID {$this->encounter->id}: Remaining={$this->encounter->torch_timer_remaining}");
         $this->broadcastUpdate();
     }
 
@@ -56,21 +72,34 @@ class TorchTimerControls extends Component
         $this->isRunning = !$this->isRunning;
         $this->encounter->torch_timer_is_running = $this->isRunning;
 
-        if ($this->isRunning && ($this->remaining === 0 || $this->remaining === null) && $this->duration > 0) {
-            $this->remaining = $this->duration; // Auto-restart if timer was at 0 or not set
+        if ($this->isRunning && ((int)$this->remaining === 0 || $this->remaining === null) && (int)$this->duration > 0) {
+            $this->remaining = (int)$this->duration;
             $this->encounter->torch_timer_remaining = $this->remaining;
         }
+
+        // Ensure Livewire properties are correctly typed before save and broadcast
+        $this->duration = (int)$this->encounter->torch_timer_duration; // Could have been null
+        $this->remaining = (int)$this->remaining; // Ensure it's an int
+        $this->isRunning = (bool)$this->encounter->torch_timer_is_running;
+
+
         $this->encounter->save();
+        Log::info("startPauseTimer saved Encounter ID {$this->encounter->id}: Duration={$this->encounter->torch_timer_duration}, Remaining={$this->encounter->torch_timer_remaining}, IsRunning={$this->encounter->torch_timer_is_running}");
         $this->broadcastUpdate();
     }
 
     public function resetTimer(): void
     {
         $this->isRunning = false;
+        $this->duration = (int)($this->encounter->torch_timer_duration ?? 60); // Ensure duration is int
         $this->remaining = $this->duration;
+
         $this->encounter->torch_timer_is_running = $this->isRunning;
         $this->encounter->torch_timer_remaining = $this->remaining;
+        $this->encounter->torch_timer_duration = $this->duration; // Persist if it was null
+
         $this->encounter->save();
+        Log::info("resetTimer saved Encounter ID {$this->encounter->id}: Duration={$this->encounter->torch_timer_duration}, Remaining={$this->encounter->torch_timer_remaining}, IsRunning={$this->encounter->torch_timer_is_running}");
         $this->broadcastUpdate();
     }
 
@@ -78,7 +107,13 @@ class TorchTimerControls extends Component
     {
         $this->remaining = max(0, (int)$this->remaining + $minutes);
         $this->encounter->torch_timer_remaining = $this->remaining;
+
+        // Ensure other props are correctly typed for broadcast
+        $this->duration = (int)($this->encounter->torch_timer_duration ?? 0);
+        $this->isRunning = (bool)$this->encounter->torch_timer_is_running;
+
         $this->encounter->save();
+        Log::info("addTime saved Encounter ID {$this->encounter->id}: Remaining={$this->encounter->torch_timer_remaining}");
         $this->broadcastUpdate();
     }
 
@@ -86,7 +121,13 @@ class TorchTimerControls extends Component
     {
         $this->remaining = max(0, (int)$this->remaining - $minutes);
         $this->encounter->torch_timer_remaining = $this->remaining;
+
+        // Ensure other props are correctly typed for broadcast
+        $this->duration = (int)($this->encounter->torch_timer_duration ?? 0);
+        $this->isRunning = (bool)$this->encounter->torch_timer_is_running;
+
         $this->encounter->save();
+        Log::info("subtractTime saved Encounter ID {$this->encounter->id}: Remaining={$this->encounter->torch_timer_remaining}");
         $this->broadcastUpdate();
     }
 

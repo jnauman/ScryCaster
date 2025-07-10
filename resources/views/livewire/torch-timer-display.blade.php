@@ -1,4 +1,4 @@
-<div x-data="torchTimerDisplay_{{ $encounterId }}({{ $remaining ?? 'null' }}, {{ $isRunning ? 'true' : 'false' }}, {{ $duration ?? 'null' }})"
+<div x-data="torchTimerDisplay_{{ $encounterId }}({{ (int)($remaining ?? 0) }}, {{ $isRunning ? 'true' : 'false' }}, {{ (int)($duration ?? 0) }})"
      x-init="initTimer()"
      wire:ignore.self
      class="p-3 bg-gray-800 bg-opacity-70 rounded-lg shadow-md text-center">
@@ -110,12 +110,18 @@
                 }
             },
 
-            timeFormatted() {
-                if (this.remainingSeconds === null) return '00:00:00';
-                const hours = Math.floor(this.remainingSeconds / 3600);
-                const minutes = Math.floor((this.remainingSeconds % 3600) / 60);
-                const seconds = this.remainingSeconds % 60;
+            formatSecondsToHms(totalSeconds) {
+                if (isNaN(totalSeconds) || totalSeconds === null || totalSeconds < 0) {
+                    return '00:00:00';
+                }
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
                 return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            },
+
+            timeFormatted() {
+                return this.formatSecondsToHms(this.remainingSeconds);
             },
 
             percentage() {
