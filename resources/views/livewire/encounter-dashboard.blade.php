@@ -14,46 +14,84 @@
         <div class="flex flex-col lg:flex-row w-full items-start lg:h-[calc(100vh-200px)] gap-6">
             {{-- Combatants List --}}
             <div class="w-full lg:w-1/3 flex-shrink-0 lg:pr-4 overflow-y-auto h-96 lg:h-full bg-[var(--color-zinc-100)] dark:bg-[var(--color-zinc-800)] p-4 rounded-lg shadow-md">
-                {{-- Adjusted h2 margin due to Torch Timer potentially being above this on smaller screens if layout shifts --}}
                 <h2 class="text-2xl font-bold mb-3 text-[var(--color-zinc-800)] dark:text-[var(--color-zinc-200)]">Turn Order</h2>
                 <div id="encounter-{{ $encounter->id }}-combatants">
                     <ul class="space-y-2">
-                        @forelse ($combatants as $combatant)
-                            <li class="p-2 rounded-lg flex items-center gap-3 transition-all duration-150 ease-in-out
-                                {{ $combatant['css_classes'] }}
-                                @if (isset($encounter->current_turn) && $combatant['order'] == $encounter->current_turn)
-                                    border-2 border-[var(--color-turn-indicator)] transform scale-105 shadow-xl
-                                @endif
-                            " data-order="{{ $combatant['order'] }}" wire:key="combatant-{{ $combatant['type'] }}-{{ $combatant['id'] }}">
-
-                                {{-- Combatant Image --}}
-                                <div class="flex-shrink-0">
-                                    <img src="{{ $combatant['image'] }}"
-                                         alt="{{ $combatant['name'] }}"
-                                         class="w-12 h-12 object-cover rounded-full border-2 border-[var(--color-zinc-300)] dark:border-[var(--color-zinc-600)]">
-                                </div>
-
-                                <div class="flex-grow">
-                                    <span class="font-bold text-xl text-[var(--color-zinc-800)] dark:text-[var(--color-zinc-100)] block">{{ $combatant['name'] }}
-                                        @if(!empty($combatant['title']))
-                                            - {{ $combatant['title'] }}
-                                        @endif
-                                    </span>
-                                    <span class="text-xs text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)]">
-                                        ({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})
-                                        @if ($combatant['type'] === 'monster_instance' && !empty($combatant['initiative_group']))
-                                            <span class="italic text-[var(--color-zinc-400)] dark:text-[var(--color-zinc-500)] ml-1">(Group: {{ $combatant['initiative_group'] }})</span>
-                                        @endif
-                                    </span>
-
-                                    @if ($combatant['type'] === 'player')
-                                        <div class="text-sm mt-1 text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-300)]">
-                                            Ancestry: <span class="font-semibold">{{ $combatant['ancestry'] ?? 'N/A' }}</span><br>
-                                            Class: <span class="font-semibold">{{ $combatant['class'] ?? 'N/A' }}</span>
-                                        </div>
+                        @forelse ($combatants as $groupOrIndividualIndex => $groupOrIndividual)
+                            @if ($groupOrIndividual['type'] === 'group')
+                                <li class="rounded-lg overflow-hidden shadow-sm"
+                                    style="border-left: 4px solid {{ $groupOrIndividual['group_css_classes'] ?: 'transparent' }}; background-color: rgba(0,0,0,0.05);"
+                                    wire:key="group-{{ $groupOrIndividual['name'] }}-{{ $groupOrIndividualIndex }}">
+                                    <h3 class="text-sm font-semibold mb-1 px-2 pt-1 text-[var(--color-zinc-700)] dark:text-[var(--color-zinc-300)]">
+                                        Group: {{ $groupOrIndividual['name'] }}
+                                    </h3>
+                                    <ul class="space-y-1 px-1 pb-1"> {{-- Inner list for combatants within the group --}}
+                                        @foreach ($groupOrIndividual['combatants'] as $combatantIndex => $combatant)
+                                            {{-- Individual Combatant LI (Player View) --}}
+                                            <li class="p-2 rounded-md flex items-center gap-3 transition-all duration-150 ease-in-out
+                                                {{ $combatant['css_classes'] }}
+                                                @if (isset($encounter->current_turn) && $combatant['order'] == $encounter->current_turn)
+                                                    border-2 border-[var(--color-turn-indicator)] transform scale-102 shadow-lg
+                                                @else
+                                                    border-2 border-transparent
+                                                @endif
+                                            " data-order="{{ $combatant['order'] }}" wire:key="combatant-{{ $combatant['type'] }}-{{ $combatant['id'] }}-group-{{ $groupOrIndividual['name'] }}">
+                                                <div class="flex-shrink-0">
+                                                    <img src="{{ $combatant['image'] }}" alt="{{ $combatant['name'] }}" class="w-10 h-10 object-cover rounded-full border border-[var(--color-zinc-300)] dark:border-[var(--color-zinc-600)]">
+                                                </div>
+                                                <div class="flex-grow">
+                                                    <span class="font-semibold text-lg text-[var(--color-zinc-800)] dark:text-[var(--color-zinc-100)] block">
+                                                        {{ $combatant['name'] }}
+                                                        @if(!empty($combatant['title'])) - {{ $combatant['title'] }}@endif
+                                                    </span>
+                                                    <span class="text-xs text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)]">
+                                                        ({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})
+                                                        {{-- Group name already indicated by the group wrapper --}}
+                                                    </span>
+                                                    @if ($combatant['type'] === 'player')
+                                                        <div class="text-xs mt-0.5 text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-300)]">
+                                                            Ancestry: <span class="font-medium">{{ $combatant['ancestry'] ?? 'N/A' }}</span> / Class: <span class="font-medium">{{ $combatant['class'] ?? 'N/A' }}</span>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </li>
+                            @else {{-- Item is an Individual Player or Monster --}}
+                                @php
+                                    $combatant = $groupOrIndividual['combatants'][0]; // Get the single combatant
+                                @endphp
+                                {{-- Individual Combatant LI (Player View) --}}
+                                <li class="p-2 rounded-lg flex items-center gap-3 transition-all duration-150 ease-in-out
+                                    {{ $combatant['css_classes'] }}
+                                    @if (isset($encounter->current_turn) && $combatant['order'] == $encounter->current_turn)
+                                        border-2 border-[var(--color-turn-indicator)] transform scale-105 shadow-xl
+                                    @else
+                                        border-2 border-transparent
                                     @endif
-                                </div>
-                            </li>
+                                " data-order="{{ $combatant['order'] }}" wire:key="combatant-{{ $combatant['type'] }}-{{ $combatant['id'] }}-individual">
+                                    <div class="flex-shrink-0">
+                                        <img src="{{ $combatant['image'] }}" alt="{{ $combatant['name'] }}" class="w-12 h-12 object-cover rounded-full border-2 border-[var(--color-zinc-300)] dark:border-[var(--color-zinc-600)]">
+                                    </div>
+                                    <div class="flex-grow">
+                                        <span class="font-bold text-xl text-[var(--color-zinc-800)] dark:text-[var(--color-zinc-100)] block">
+                                            {{ $combatant['name'] }}
+                                            @if(!empty($combatant['title'])) - {{ $combatant['title'] }}@endif
+                                        </span>
+                                        <span class="text-xs text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)]">
+                                            ({{ $combatant['type'] === 'player' ? 'Player' : 'Monster' }})
+                                            {{-- No group name needed for ungrouped individuals --}}
+                                        </span>
+                                        @if ($combatant['type'] === 'player')
+                                            <div class="text-sm mt-1 text-[var(--color-zinc-600)] dark:text-[var(--color-zinc-300)]">
+                                                Ancestry: <span class="font-semibold">{{ $combatant['ancestry'] ?? 'N/A' }}</span><br>
+                                                Class: <span class="font-semibold">{{ $combatant['class'] ?? 'N/A' }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </li>
+                            @endif
                         @empty
                             <li class="p-4 text-[var(--color-zinc-500)] dark:text-[var(--color-zinc-400)] text-center">No combatants in this encounter yet. Time to add some!</li>
                         @endforelse

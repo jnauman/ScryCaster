@@ -72,14 +72,58 @@ class EncounterDashboard extends Component
                 'initiative_group' => $mi->initiative_group, // Added for player view indication
 				//'ac' => $mi->monster->ac,
 				'order' => $mi->order,
-				// 'original_model' => $mi, // Removed as it might cause issues with Livewire state and isn't used in blade
 				'image' => $mi->monster->image ? Storage::disk('public')->url($mi->monster->image) : '/images/monster_image.png',
-				// Explicitly define the CSS classes here
 				'css_classes' => $isCurrentTurn ? 'monster-current-turn' : 'monster-not-turn',
+                'group_color' => $mi->group_color, // Added for grouping logic
+                'original_model' => $mi, // Temporarily add for group_color, ensure it's serializable or remove after use
 			];
 		});
 
-		$this->combatants = $playerCharacters->merge($monsterInstances)->sortBy('order')->values()->all();
+		// $this->combatants = $playerCharacters->merge($monsterInstances)->sortBy('order')->values()->all();
+
+        // New grouping logic for player view
+        $groupedCombatants = [];
+        $playerGroupIndex = 0; // For unique keys for player "groups"
+        $allCombatantsSorted = $playerCharacters->merge($monsterInstances)->sortBy('order');
+
+        foreach ($allCombatantsSorted as $combatantData) {
+            $monsterInstanceModel = null;
+            if ($combatantData['type'] === 'monster_instance') {
+                $monsterInstanceModel = $combatantData['original_model'] ?? null; // Access original model
+            }
+
+            if ($combatantData['type'] === 'monster_instance' && !empty($combatantData['initiative_group'])) {
+                $groupName = $combatantData['initiative_group'];
+
+                if (!isset($groupedCombatants[$groupName])) {
+                    $groupedCombatants[$groupName] = [
+                        'type' => 'group',
+                        'name' => $groupName,
+                        'group_css_classes' => $monsterInstanceModel ? $monsterInstanceModel->group_color : '',
+                        'combatants' => [],
+                        'order' => $combatantData['order'], // For sorting groups
+                    ];
+                }
+                // Remove original_model before adding to combatants array if it's not needed further or causes issues
+                unset($combatantData['original_model']);
+                $groupedCombatants[$groupName]['combatants'][] = $combatantData;
+            } else {
+                $groupKey = 'individual-' . $combatantData['type'] . '-' . ($combatantData['type'] === 'player' ? $playerGroupIndex++ : $combatantData['id']);
+                // Remove original_model for players/ungrouped monsters too if it was ever added
+                unset($combatantData['original_model']);
+                $groupedCombatants[$groupKey] = [
+                    'type' => 'individual',
+                    'name' => $combatantData['name'],
+                    'group_css_classes' => '',
+                    'combatants' => [$combatantData],
+                    'order' => $combatantData['order'],
+                ];
+            }
+        }
+        uasort($groupedCombatants, function ($a, $b) {
+            return $a['order'] <=> $b['order'];
+        });
+        $this->combatants = array_values($groupedCombatants);
 	}
 
 	/**

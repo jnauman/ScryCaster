@@ -18,6 +18,7 @@ class MonsterInstance extends Model
         'max_health',
         'initiative_roll',
         'initiative_group', // Added
+        'group_color', // Added
         'order',
     ];
 
