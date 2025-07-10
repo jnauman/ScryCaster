@@ -54,6 +54,7 @@ class TorchTimerUpdated implements ShouldBroadcast
 			'encounterId' => $this->encounterId,
 			'remaining' => $this->remaining,
 			'duration' => $this->duration,
+			'isRunning' => $this->isRunning,
 		];
 	}
 }
