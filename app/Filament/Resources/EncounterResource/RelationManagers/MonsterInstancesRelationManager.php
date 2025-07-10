@@ -16,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ColorPicker; // Added import
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\HtmlString; // Added import
 
 class MonsterInstancesRelationManager extends RelationManager
 {
@@ -87,7 +88,16 @@ class MonsterInstancesRelationManager extends RelationManager
                 TextColumn::make('monster.ac')->label('AC (Base)')->sortable(),
                 TextColumn::make('initiative_roll')->label('Initiative')->sortable(),
                 TextColumn::make('initiative_group')->label('Group')->sortable()->placeholder('N/A'),
-                TextColumn::make('group_color')->label('Group Color')->sortable()->placeholder('N/A'),
+                TextColumn::make('group_color')
+                    ->label('Group Color')
+                    ->sortable()
+                    ->placeholder('N/A')
+                    ->formatStateUsing(fn (?string $state): HtmlString =>
+                        $state ? new HtmlString(
+                            '<span style="display: inline-block; width: 20px; height: 20px; background-color: ' . e($state) . '; border-radius: 3px; border: 1px solid #ccc;"></span>'
+                        ) : new HtmlString('&mdash;')
+                    )
+                    ->html(),
             ])
             ->filters([
                 //
