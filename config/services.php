@@ -34,5 +34,10 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+	'mailgun' => [
+		'transport' => 'mailgun',
+		'domain' => env('MAILGUN_DOMAIN'),
+		'secret' => env('MAILGUN_SECRET'),
+	],
 
 ];
