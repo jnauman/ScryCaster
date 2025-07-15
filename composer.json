@@ -15,7 +15,9 @@
         "laravel/tinker": "^2.10.1",
         "livewire/flux": "^2.0",
         "livewire/volt": "^1.7.0",
-        "pusher/pusher-php-server": "^7.2"
+        "pusher/pusher-php-server": "^7.2",
+        "symfony/http-client": "*",
+        "symfony/mailgun-mailer": "*"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.15",
